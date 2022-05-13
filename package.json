@@ -36,8 +36,8 @@
   },
   "scripts": {
     "dev": "nodemon src/app.ts",
-    "start": "npm run build && node dist/app.js",
-    "build": "npm run lint && tsc -p .",
+    "start": "npm run build && node dist/src/app.js",
+    "build": "npm run lint && tsc -p . && cp -a ./src/dbMigrations/ ./dist/src/dbMigrations",
     "lint": "eslint \"**/*.{ts,tsx}\"",
     "test": "jest --forceExit --maxWorkers=1 --silent"
   },
