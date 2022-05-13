@@ -4,5 +4,8 @@ module.exports = {
   testEnvironment: 'node',
   transform: {'^.+\\.(t|j)sx?$': 'ts-jest'},
   testRegex: '((\\.|/)(test|spec))\\.(jsx?|tsx?)$',
-  moduleFileExtensions:  ["ts", "tsx", "js", "jsx", "json", "node"]
+  moduleFileExtensions:  ["ts", "tsx", "js", "jsx", "json", "node"],
+  transformIgnorePatterns: [
+    "node_modules/(?!@polkadot/(util|api-augment|types-augment))"
+  ]
 }
