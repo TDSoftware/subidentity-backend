@@ -10,10 +10,10 @@ export const chainService = {
     async createChain(wsProvider: string): Promise<ChainStatusDTO|undefined> {
         const isArchive = await isArchiveNode(wsProvider);
         const implmentsIdentityPallet = await implementsIdentityPallet(wsProvider);
+        const chainName = await getChainName(wsProvider);
 
         if(isArchive && implmentsIdentityPallet) {
-            const token: Token = await getTokenDetails(wsProvider);
-            const chainName = await getChainName(wsProvider);
+            const token: Token = await getTokenDetails(wsProvider);    
             const chainDTO = {
                 chainName: chainName,
                 wsProvider: wsProvider,
@@ -24,6 +24,14 @@ export const chainService = {
             };
             const chain = await chainRepository.insert(chainMapper.toInsertEntity(chainDTO));
             return chainMapper.toStatusDTO(chain, implmentsIdentityPallet);
+        } else {
+            const chainStatus:ChainStatusDTO = {
+                isIndexed: false,
+                implementsIdentityPallet: implmentsIdentityPallet,
+                isArchiveNode: isArchive,
+                chainName: chainName
+            };
+            return chainStatus;
         }
     },
 
