@@ -38,8 +38,6 @@ export const chainService = {
         const chain = await chainRepository.findByWsProvider(wsProvider);
         if(!chain)
             return await this.createChain(wsProvider);
-        
-        const implmentsIdentityPallet = await implementsIdentityPallet(wsProvider);
-        return chainMapper.toStatusDTO(chain, implmentsIdentityPallet);
+        return chainMapper.toStatusDTO(chain, true);
     }
 };
