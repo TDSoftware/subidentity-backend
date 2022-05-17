@@ -8,6 +8,7 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
+    "@npmjs_tdsoftware/subidentity": "^0.0.5",
     "body-parser": "^1.20.0",
     "dotenv": "^16.0.0",
     "express": "^4.17.3",
@@ -35,8 +36,8 @@
   },
   "scripts": {
     "dev": "nodemon src/app.ts",
-    "start": "npm run build && node dist/app.js",
-    "build": "npm run lint && tsc -p .",
+    "start": "npm run build && node dist/src/app.js",
+    "build": "npm run lint && tsc -p . && cp -a ./src/dbMigrations/ ./dist/src/dbMigrations",
     "lint": "eslint \"**/*.{ts,tsx}\"",
     "test": "jest --forceExit --maxWorkers=1 --silent"
   },

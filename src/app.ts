@@ -8,7 +8,7 @@ import { json } from "body-parser";
 import express, { Application, NextFunction, Request, Response } from "express";
 import { join } from "path";
 import { migrateDatabase } from "./lib/mysqlDatabase";
-import { userRouter } from "./routes/users/userRouter";
+import { chainRouter } from "./routes/chains/chainRouter";
 import { versionRouter } from "./routes/versionRouter";
 import { Server } from "http";
 
@@ -22,7 +22,7 @@ startUp();
  *  corresponding URL path.
  */
 function registerRouters(app: Application): void {
-    app.use("/users", userRouter);
+    app.use("/chains", chainRouter);
     app.use("/version", versionRouter);
 }
 
