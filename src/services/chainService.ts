@@ -14,16 +14,15 @@ export const chainService = {
 
         if(isArchive && implmentsIdentityPallet) {
             const token: Token = await getTokenDetails(wsProvider);    
-            const chainDTO = {
-                chainName: chainName,
-                wsProvider: wsProvider,
+            const chain = {
+                chain_name: chainName,
+                ws_provider: wsProvider,
                 status: ChainStatus.Unindexed,
-                tokenSymbol: token.symbol,
-                tokenDecimals: token.decimals,
-                isArchiveNode: isArchive
+                token_symbol: token.symbol,
+                token_decimals: token.decimals,
+                is_archive_node: isArchive
             };
-            const chain = await chainRepository.insert(chainMapper.toInsertEntity(chainDTO));
-            return chainMapper.toStatusDTO(chain, implmentsIdentityPallet);
+            return chainMapper.toStatusDTO(await chainRepository.insert(chain), implmentsIdentityPallet);
         } else {
             const chainStatus:ChainStatusDTO = {
                 isIndexed: false,

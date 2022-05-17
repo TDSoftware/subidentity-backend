@@ -11,6 +11,8 @@ chainRouter.get("/status", async (req: Request, res: Response, next: NextFunctio
             res.send({
                 chainStatus
             });
+        } else {
+            throw new Error("400:Query parameter missing:wsProvider");
         }
     } catch (e) {
         next(e);
