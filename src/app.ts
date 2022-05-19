@@ -10,6 +10,7 @@ import { join } from "path";
 import { migrateDatabase } from "./lib/mysqlDatabase";
 import { chainRouter } from "./routes/chains/chainRouter";
 import { versionRouter } from "./routes/versionRouter";
+import { identityRouter } from "./routes/identities/identityRouter";
 import { Server } from "http";
 
 export const app: Application = express();
@@ -24,6 +25,7 @@ startUp();
 function registerRouters(app: Application): void {
     app.use("/chains", chainRouter);
     app.use("/version", versionRouter);
+    app.use("/identities", identityRouter);
 }
 
 /**
