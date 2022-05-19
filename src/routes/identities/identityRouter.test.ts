@@ -14,12 +14,6 @@ describe("GET /identities", () => {
         expect(response.body.error).toBe("Query parameter missing:wsProvider");
     });
 
-    it("should fetch a single identity for the wsProvider and account address", async () => {
-        const response = await request().get("/identities?wsProvider="+wsProvider+"&address="+accountAddress);
-        //TODO : update test case after service is implemented
-        expect(response.statusCode).toBe(501);
-    });
-
     it("should throw error since page number is missing in the query", async () => {
         const response = await request().get("/identities?wsProvider="+wsProvider);
         expect(response.statusCode).toBe(400);
@@ -32,8 +26,41 @@ describe("GET /identities", () => {
         expect(response.body.error).toBe("Query parameter missing:limit");
     });
 
+    it("should throw error since page number is not valid", async () => {
+        const response = await request().get("/identities?wsProvider="+wsProvider+"&page=yes&limit=10");
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Please send a valid page number");
+    });
+
+    it("should throw error since page limit is not valid", async () => {
+        const response = await request().get("/identities?wsProvider="+wsProvider+"&page=1&limit=no");
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Please send a valid page limit");
+    });
+
     it("should fetch all the identities for the wsProvider", async () => {
         const response = await request().get("/identities?wsProvider="+wsProvider+"&page=1&limit=10");
+        //TODO : update test case after service is implemented
+        expect(response.statusCode).toBe(501);
+    });
+});
+
+describe("GET /identities/identity", () => {
+    
+    it("should throw error since address is missing in the query", async () => {
+        const response = await request().get("/identities/identity");
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Query parameter missing:address");
+    });
+
+    it("should throw error since wsProvider is missing in the query", async () => {
+        const response = await request().get("/identities/identity?address="+accountAddress);
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Query parameter missing:wsProvider");
+    });
+
+    it("should fetch a single identity for the wsProvider and account address", async () => {
+        const response = await request().get("/identities/identity?address="+accountAddress+"&wsProvider="+wsProvider);
         //TODO : update test case after service is implemented
         expect(response.statusCode).toBe(501);
     });
@@ -56,6 +83,18 @@ describe("GET /identities/search", () => {
         const response = await request().get("/identities/search?wsProvider="+wsProvider+"&page=1");
         expect(response.statusCode).toBe(400);
         expect(response.body.error).toBe("Query parameter missing:limit");
+    });
+
+    it("should throw error since page number is not valid", async () => {
+        const response = await request().get("/identities/search?wsProvider="+wsProvider+"&page=yes&limit=10");
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Please send a valid page number");
+    });
+
+    it("should throw error since page limit is not valid", async () => {
+        const response = await request().get("/identities/search?wsProvider="+wsProvider+"&page=1&limit=no");
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Please send a valid page limit");
     });
 
     it("should throw error since searchKey is missing in the query", async () => {
