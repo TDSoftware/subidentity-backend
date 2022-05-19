@@ -1,7 +1,6 @@
 CREATE TABLE chain (
     id INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     chain_name VARCHAR(255) NOT NULL,
-    ws_provider VARCHAR(255) NOT NULL UNIQUE,
     status ENUM('UNINDEXED', 'INPROGRESS', 'INDEXED'),
     token_symbol VARCHAR(255) UNIQUE,
     token_decimals INT,
