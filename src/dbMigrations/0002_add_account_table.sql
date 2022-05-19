@@ -3,5 +3,5 @@ CREATE TABLE account (
     chain_id INT(11) UNSIGNED NOT NULL,
     FOREIGN KEY(chain_id) REFERENCES chain(id),
     address VARCHAR(255),
-    balance DECIMAL(12,12)
+    balance DECIMAL(22,12)
 )
