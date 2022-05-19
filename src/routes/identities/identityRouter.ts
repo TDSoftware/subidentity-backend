@@ -37,10 +37,10 @@ identityRouter.get("/search", async (req: Request, res: Response, next: NextFunc
     }
 });
 
-identityRouter.get("/identity", async (req: Request, res: Response, next: NextFunction) => {
+identityRouter.get("/:address", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        if(typeof req.query.address !== "string")
-            throw new Error("400:Query parameter missing:address");
+        if(typeof req.params.address !== "string")
+            throw new Error("400:Path variable missing:address");
 
         if(typeof req.query.wsProvider !== "string")
             throw new Error("400:Query parameter missing:wsProvider");

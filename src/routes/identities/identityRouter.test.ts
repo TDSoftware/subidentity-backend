@@ -45,22 +45,16 @@ describe("GET /identities", () => {
     });
 });
 
-describe("GET /identities/identity", () => {
-    
-    it("should throw error since address is missing in the query", async () => {
-        const response = await request().get("/identities/identity");
-        expect(response.statusCode).toBe(400);
-        expect(response.body.error).toBe("Query parameter missing:address");
-    });
+describe("GET /identities/:address", () => {
 
     it("should throw error since wsProvider is missing in the query", async () => {
-        const response = await request().get("/identities/identity?address="+accountAddress);
+        const response = await request().get("/identities/"+accountAddress);
         expect(response.statusCode).toBe(400);
         expect(response.body.error).toBe("Query parameter missing:wsProvider");
     });
 
     it("should fetch a single identity for the wsProvider and account address", async () => {
-        const response = await request().get("/identities/identity?address="+accountAddress+"&wsProvider="+wsProvider);
+        const response = await request().get("/identities/"+accountAddress+"?wsProvider="+wsProvider);
         //TODO : update test case after service is implemented
         expect(response.statusCode).toBe(501);
     });
