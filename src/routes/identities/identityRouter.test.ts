@@ -4,7 +4,7 @@ setupTests();
 
 const wsProvider = "ws://fake.io";
 const accountAddress = "ABCDEFGHI12345678";
-const searchKey = "fake";
+const searchKey = "fake123Search";
 
 describe("GET /identities", () => {
     
@@ -99,7 +99,8 @@ describe("GET /identities/search", () => {
 
     it("should search the identities matching the key for the wsProvider", async () => {
         const response = await request().get("/identities/search?wsProvider="+wsProvider+"&page=1&limit=10&searchKey="+searchKey);
-        //TODO : update test case after service is implemented
-        expect(response.statusCode).toBe(501);
+        expect(response.statusCode).toBe(200);
+        expect(Array.isArray(response.body.identities.items)).toBe(true);
+        expect(response.body.identities.items.length).toBe(0);
     });
 });
