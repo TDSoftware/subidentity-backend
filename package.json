@@ -38,7 +38,7 @@
   "scripts": {
     "dev-api": "nodemon src/api.ts",
     "dev-scheduler": "nodemon src/scheduler.ts",
-    "dev": "npm run dev-api && npm run dev-scheduler",
+    "dev": "npm run dev-api",
     "start-api": "npm run build && node dist/src/api.js",
     "start-scheduler": "npm run build && node dist/src/scheduler.js",
     "build": "npm run lint && tsc -p . && cp -a ./src/dbMigrations/ ./dist/src/dbMigrations",
