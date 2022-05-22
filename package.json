@@ -8,7 +8,7 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "@npmjs_tdsoftware/subidentity": "^0.0.5",
+    "@npmjs_tdsoftware/subidentity": "^0.0.7",
     "@types/node-cron": "^3.0.1",
     "body-parser": "^1.20.0",
     "dotenv": "^16.0.0",
