@@ -1,6 +1,6 @@
 import { Application } from "express";
 import supertest from "supertest";
-import { app, server } from "../app";
+import { app, server } from "../api";
 import { connection, databaseReady } from "./mysqlDatabase";
 
 export function request(): supertest.SuperTest<supertest.Test> {

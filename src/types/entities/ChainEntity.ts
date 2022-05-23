@@ -1,6 +1,6 @@
 import { ChainStatus } from "../enums/ChainStatus";
 
-export interface Chain {
+export interface ChainEntity {
     id: number;
     chain_name: string;
     status: ChainStatus;
