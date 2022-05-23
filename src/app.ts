@@ -52,7 +52,7 @@ function registerErrorHandler(app: Application): void {
  *  we can put that code in global scope.
  */
 async function startUp(): Promise<void> {
-    await migrateDatabase(join(__dirname, "../dbMigrations"));
+    await migrateDatabase(join(__dirname, "dbMigrations"));
     app.use(json());
     registerRouters(app);
     registerErrorHandler(app);
