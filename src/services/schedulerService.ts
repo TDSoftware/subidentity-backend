@@ -7,10 +7,10 @@ import { ChainsWsProvider } from "../types/dtos/ChainsWsProvider";
 
 
 export const schedulerService = {
-    async fetchIdentities(): Promise<void>{
+    async fetchIdentities(): Promise<void> {
         const chains: ChainsWsProvider[] = await chainRepository.getAllWithFirstWsProvider();
         let identities;
-        chains.forEach( async (chain: ChainsWsProvider) => {
+        chains.forEach(async (chain: ChainsWsProvider) => {
             identities = await getCompleteIdentities(chain.ws_provider);
             await accountRepository.insertOrUpdateAccountsOfIdentities(
                 identities, chain.id

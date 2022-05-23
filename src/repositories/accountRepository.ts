@@ -8,7 +8,7 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
         return "account";
     }
 
-    async findAllByChainId(chain_id: number): Promise<AccountEntity[]|undefined> {
+    async findAllByChainId(chain_id: number): Promise<AccountEntity[] | undefined> {
         const query = `SELECT *
                        FROM ${this.tableName} 
                        WHERE ${this.tableName}.chain_id=${chain_id}`;
@@ -16,7 +16,7 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
     }
 
     async insertOrUpdateAccountsOfIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
-        const data = [identities.map((identity)=> [identity.basicInfo.address, chainId])];
+        const data = [identities.map((identity) => [identity.basicInfo.address, chainId])];
         const query = `INSERT IGNORE ${accountRepository.tableName}(
                             address,
                             chain_id

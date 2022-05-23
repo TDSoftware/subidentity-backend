@@ -1,8 +1,10 @@
 import { config } from "dotenv";
 config();
 
-import {schedulerService} from "./services/schedulerService";
+import { schedulerService } from "./services/schedulerService";
 import cron from "node-cron";
+
+schedulerService.fetchIdentities();
 
 //fetch Identities every scheduled
 //cron schedule expression can be changeds
