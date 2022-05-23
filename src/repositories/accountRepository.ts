@@ -16,7 +16,7 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
     }
 
     async insertOrUpdateAccountsOfIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
-        const data = [identities.map((identity) => [identity.basicInfo.address, chainId])];
+        const data = [identities.map((identity: Identity) => [identity.basicInfo.address, chainId])];
         const query = `INSERT IGNORE ${accountRepository.tableName}(
                             address,
                             chain_id
