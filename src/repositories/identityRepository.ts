@@ -3,6 +3,7 @@ import { MySQLRepository } from "../lib/MySQLRepository";
 import { IdentityEntity } from "../types/entities/IdentityEntity";
 import { accountRepository } from "../repositories/accountRepository";
 import { Identity } from "@npmjs_tdsoftware/subidentity";
+import { AccountEntity } from "../types/entities/AccountEntity";
 
 class IdentityRepository extends MySQLRepository<IdentityEntity> {
     get tableName(): string {
@@ -30,8 +31,8 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                         twitter = values(twitter),
                         web = values(web),
                         email = values(email);`;
-        const data = [identities.map((identity) =>
-            [accounts?.find(account => account.address === identity.basicInfo.address)?.id, true, identity.basicInfo.display, identity.basicInfo.legal, identity.basicInfo.address, identity.basicInfo.riot, identity.basicInfo.twitter, identity.basicInfo.web, identity.basicInfo.email]
+        const data = [identities.map((identity: Identity) =>
+            [accounts?.find((account: AccountEntity) => account.address === identity.basicInfo.address)?.id, true, identity.basicInfo.display, identity.basicInfo.legal, identity.basicInfo.address, identity.basicInfo.riot, identity.basicInfo.twitter, identity.basicInfo.web, identity.basicInfo.email]
         )];
         return (await runInsertQuery(query, data));
     }
