@@ -8,11 +8,11 @@ export interface QueryResult {
     fieldCount: number;
     affectedRows: number;
     insertId: number;
-    serverStatus: number; 
-    warningCount: number; 
+    serverStatus: number;
+    warningCount: number;
     message: string;
-    protocol41: boolean; 
-    changedRows: number; 
+    protocol41: boolean;
+    changedRows: number;
 }
 
 /**
@@ -57,7 +57,7 @@ export function runInsertQuery<T>(sqlStatement: string, data: T): Promise<QueryR
 }
 
 export function runUpdateQuery(sqlStatement: string): Promise<QueryResult> {
-    return new Promise((resolve: (results: QueryResult) => void, reject: (error: MysqlError) => void) => {        
+    return new Promise((resolve: (results: QueryResult) => void, reject: (error: MysqlError) => void) => {
         const callback: queryCallback = (error: MysqlError | null, results: QueryResult): void => {
             if (error) return reject(error);
             resolve(results);
@@ -87,14 +87,18 @@ const createMigrationTableQuery = `
  *                                          for the database migrations
  */
 export async function migrateDatabase(pathToMigrationScripts: string): Promise<void> {
+    console.log("[database] Path to migration scripts: ", pathToMigrationScripts);
     await runQuery(createMigrationTableQuery);
     const filenames = readdirSync(pathToMigrationScripts);
+    console.log("[database] Got file names of migration scripts: ", filenames);
     for (const filename of filenames) {
         const [{ amount }] = await runSelectQuery(
             `SELECT COUNT(*) as amount FROM MIGRATION WHERE name="${filename}"`
         );
         if (amount === 0) {
-            const sqlQuery = readFileSync(join(pathToMigrationScripts, filename), "utf-8");
+            const filepath = join(pathToMigrationScripts, filename);
+            console.log("[database] File path of migration script to run: ", filepath);
+            const sqlQuery = readFileSync(filepath, "utf-8");
             await runQuery(sqlQuery);
             await runInsertQuery("INSERT INTO MIGRATION SET ?", { name: filename });
             console.log(
