@@ -53,10 +53,10 @@ function registerErrorHandler(app: Application): void {
  *  it into an async function. Once global async is available,
  *  we can put that code in global scope.
  */
-async function startUp(): Promise<void> {    
+async function startUp(): Promise<void> {
     await migrateDatabase(join(__dirname, "dbMigrations"));
     app.use(json());
     registerRouters(app);
     registerErrorHandler(app);
-    server = app.listen(process.env.PORT, () => console.log(`Server started on port ${process.env.PORT}.`));    
+    server = app.listen(process.env.PORT, () => console.log(`Server started on port ${process.env.PORT}.`));
 }
