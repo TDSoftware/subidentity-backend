@@ -12,6 +12,7 @@ import { chainRouter } from "./routes/chains/chainRouter";
 import { versionRouter } from "./routes/versionRouter";
 import { identityRouter } from "./routes/identities/identityRouter";
 import { Server } from "http";
+import cors from "cors";
 
 export const app: Application = express();
 export let server: Server;
@@ -55,6 +56,7 @@ function registerErrorHandler(app: Application): void {
  */
 async function startUp(): Promise<void> {
     await migrateDatabase(join(__dirname, "dbMigrations"));
+    app.use(cors());
     app.use(json());
     registerRouters(app);
     registerErrorHandler(app);
