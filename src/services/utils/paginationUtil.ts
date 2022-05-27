@@ -7,9 +7,9 @@ export const paginationUtil = {
             const startIndex = (pageNum -1) * limit;
             const endIndex = pageNum * limit;
             totalPageCount = Math.ceil(totalItemsCount/limit);
-            if(startIndex > 0)
+            if(startIndex > 0 && startIndex <= totalPageCount)
                 previous = pageNum - 1;
-            if(endIndex < totalItemsCount)
+            if(endIndex < totalItemsCount && endIndex <= totalPageCount)
                 next = pageNum + 1;
         }
         return {totalItemsCount, totalPageCount, previous, next, items}; 

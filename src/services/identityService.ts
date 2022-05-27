@@ -17,16 +17,18 @@ export const identityService = {
     async searchIdentitiesByWsProviderAndKey(wsProvider: string, searchKey: string, pageNum: number, limit: number): Promise<Page<Identity>> {
         const items: Identity[] = [];
         const totalItemsCount = await identityRepository.getRowCount(wsProvider, searchKey);
-        if(totalItemsCount > 0) {
+        if(totalItemsCount > 0 && pageNum > 0) {
             const offset = (pageNum - 1) * limit;
             const searchResults = await identityRepository.searchByWsProviderAndKey(wsProvider, searchKey, offset, limit);
-            const chainName = Object.values(JSON.parse(JSON.stringify(searchResults[0])))[0] as string;
-            searchResults.forEach(function(value) {
-                const basicInfo: BasicIdentityInfo = value;
-                const chain = chainName;
-                const identity : Identity = { chain, basicInfo };
-                items.push(identity);
-            });
+            if(searchResults.length > 0) {
+                const chainName = Object.values(JSON.parse(JSON.stringify(searchResults[0])))[0] as string;
+                searchResults.forEach(function(value) {
+                    const basicInfo: BasicIdentityInfo = value;
+                    const chain = chainName;
+                    const identity : Identity = { chain, basicInfo };
+                    items.push(identity);
+                });
+            }
         }
         return paginationUtil.paginate(items, pageNum, limit, totalItemsCount);
     }

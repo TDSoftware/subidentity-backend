@@ -21,13 +21,13 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                         INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
                         INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                         WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
-                        AND ${this.tableName}.display LIKE "%${searchKey}%" 
+                        AND (${this.tableName}.display LIKE "%${searchKey}%" 
                             OR ${this.tableName}.legal LIKE "%${searchKey}%"
                             OR ${this.tableName}.address LIKE "%${searchKey}%"
                             OR ${this.tableName}.riot LIKE "%${searchKey}%"
                             OR ${this.tableName}.twitter LIKE "%${searchKey}%"
                             OR ${this.tableName}.web LIKE "%${searchKey}%"
-                            OR ${this.tableName}.email LIKE "%${searchKey}%"
+                            OR ${this.tableName}.email LIKE "%${searchKey}%")
                         ORDER BY ${this.tableName}.id`;
         const queryResult = (await runSelectQuery<number>(query))[0];
         const resultJson = Object.values(JSON.parse(JSON.stringify(queryResult)));
@@ -49,13 +49,13 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                        INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
                        INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                        WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
-                       AND ${this.tableName}.display LIKE "%${searchKey}%" 
+                       AND (${this.tableName}.display LIKE "%${searchKey}%" 
                             OR ${this.tableName}.legal LIKE "%${searchKey}%"
                             OR ${this.tableName}.address LIKE "%${searchKey}%"
                             OR ${this.tableName}.riot LIKE "%${searchKey}%"
                             OR ${this.tableName}.twitter LIKE "%${searchKey}%"
                             OR ${this.tableName}.web LIKE "%${searchKey}%"
-                            OR ${this.tableName}.email LIKE "%${searchKey}%"
+                            OR ${this.tableName}.email LIKE "%${searchKey}%")
                         ORDER BY ${this.tableName}.id
                         LIMIT ${escape(offset)},${escape(limit)}`;
         return (await runSelectQuery<IdentityEntity>(query));
