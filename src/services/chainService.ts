@@ -5,16 +5,17 @@ import { getChainName, getTokenDetails, implementsIdentityPallet, isArchiveNode 
 import { ChainStatus } from "../types/enums/ChainStatus";
 import { Token } from "@npmjs_tdsoftware/subidentity";
 import { wsProviderService } from "./wsProviderService";
+import { ChainEntity } from "../types/entities/ChainEntity";
 
 export const chainService = {
 
-    async createChain(wsProvider: string): Promise<ChainStatusDTO|undefined> {
+    async createChain(wsProvider: string): Promise<ChainStatusDTO | undefined> {
         const isArchive = await isArchiveNode(wsProvider);
         const implmentsIdentityPallet = await implementsIdentityPallet(wsProvider);
         const chainName = await getChainName(wsProvider);
 
-        if(isArchive && implmentsIdentityPallet) {
-            const token: Token = await getTokenDetails(wsProvider);    
+        if (isArchive && implmentsIdentityPallet) {
+            const token: Token = await getTokenDetails(wsProvider);
             const chain = {
                 chain_name: chainName,
                 status: ChainStatus.Unindexed,
@@ -26,7 +27,7 @@ export const chainService = {
             wsProviderService.createWsProvider(chainEntity.id, wsProvider);
             return chainMapper.toStatusDTO(chainEntity, implmentsIdentityPallet);
         } else {
-            const chainStatus:ChainStatusDTO = {
+            const chainStatus: ChainStatusDTO = {
                 isIndexed: false,
                 implementsIdentityPallet: implmentsIdentityPallet,
                 isArchiveNode: isArchive,
@@ -36,10 +37,17 @@ export const chainService = {
         }
     },
 
-    async findByWsProvider(wsProvider: string): Promise<ChainStatusDTO|undefined> {
+    async findByWsProvider(wsProvider: string): Promise<ChainStatusDTO | undefined> {
         const chain = await chainRepository.findByWsProvider(wsProvider);
-        if(!chain)
+        if (!chain)
             return await this.createChain(wsProvider);
         return chainMapper.toStatusDTO(chain, true);
+    },
+
+    async getChainEntityByWsProvider(wsProvider: string): Promise<ChainEntity> {
+        const chain = await chainRepository.findByWsProvider(wsProvider);
+        if (!chain)
+            throw new Error("Could not find chain with given wsProvider");
+        return chain;
     }
 };
