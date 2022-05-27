@@ -1,7 +1,7 @@
 import { MySQLRepository } from "../lib/MySQLRepository";
-import { WsProvider } from "../types/entities/WsProvider";
+import { WsProviderEntity } from "../types/entities/WsProviderEntity";
 
-class WsProviderRepository extends MySQLRepository<WsProvider> {
+class WsProviderRepository extends MySQLRepository<WsProviderEntity> {
     get tableName(): string {
         return "ws_provider";
     }

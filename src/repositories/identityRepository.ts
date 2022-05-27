@@ -1,12 +1,15 @@
 import { escape } from "mysql";
 import { runSelectQuery } from "../lib/mysqlDatabase";
 import { MySQLRepository } from "../lib/MySQLRepository";
-import { Identity } from "../types/entities/Identity";
 import { wsProviderRepository } from "../repositories/wsProviderRepository";
-import { accountRepository } from "../repositories/accountRepository";
 import { chainRepository } from "../repositories/chainRepository";
+import { QueryResult, runInsertQuery } from "../lib/mysqlDatabase";
+import { IdentityEntity } from "../types/entities/IdentityEntity";
+import { accountRepository } from "../repositories/accountRepository";
+import { Identity } from "@npmjs_tdsoftware/subidentity";
+import { AccountEntity } from "../types/entities/AccountEntity";
 
-class IdentityRepository extends MySQLRepository<Identity> {
+class IdentityRepository extends MySQLRepository<IdentityEntity> {
     get tableName(): string {
         return "identity";
     }
@@ -31,7 +34,7 @@ class IdentityRepository extends MySQLRepository<Identity> {
         return resultJson[0] as number;
     }
 
-    async searchByWsProviderAndKey(wsProvider: string, searchKey: string, offset: number, limit: number): Promise<Identity[]> {
+    async searchByWsProviderAndKey(wsProvider: string, searchKey: string, offset: number, limit: number): Promise<IdentityEntity[]> {
         const query = `SELECT 
                             ${chainRepository.tableName}.chain_name,
                             ${this.tableName}.display, 
@@ -55,7 +58,34 @@ class IdentityRepository extends MySQLRepository<Identity> {
                             OR ${this.tableName}.email LIKE "%${searchKey}%"
                         ORDER BY ${this.tableName}.id
                         LIMIT ${escape(offset)},${escape(limit)}`;
-        return (await runSelectQuery<Identity>(query));
+        return (await runSelectQuery<IdentityEntity>(query));
+    }
+
+    async insertOrUpdateAll(identities: Identity[], chainId: number): Promise<QueryResult> {
+        const accounts = await accountRepository.findAllByChainId(chainId);
+        const query = `INSERT INTO ${this.tableName}(
+                        account_id,
+                        active,
+                        display,
+                        legal,
+                        address,
+                        riot,
+                        twitter,
+                        web,
+                        email
+                    )
+                    VALUES ? on duplicate key update 
+                        active = values(active),
+                        display = values(display),
+                        address = values(address),
+                        riot = values(riot),
+                        twitter = values(twitter),
+                        web = values(web),
+                        email = values(email);`;
+        const data = [identities.map((identity: Identity) =>
+            [accounts?.find((account: AccountEntity) => account.address === identity.basicInfo.address)?.id, true, identity.basicInfo.display, identity.basicInfo.legal, identity.basicInfo.address, identity.basicInfo.riot, identity.basicInfo.twitter, identity.basicInfo.web, identity.basicInfo.email]
+        )];
+        return (await runInsertQuery(query, data));
     }
 }
 
