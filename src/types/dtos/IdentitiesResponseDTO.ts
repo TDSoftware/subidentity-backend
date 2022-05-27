@@ -1,10 +1,5 @@
-export interface IdentitiesResponseDTO{
+import { IdentityEntity } from "../entities/IdentityEntity";
+
+export interface IdentitiesResponseDTO extends IdentityEntity{
     chainName: string
-    display: string;
-    legal: string;
-    address: string;
-    riot: string;
-    twitter: string;
-    web: string;
-    email: string;
 }

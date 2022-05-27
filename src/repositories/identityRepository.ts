@@ -38,13 +38,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
     async searchByWsProviderAndKey(wsProvider: string, searchKey: string, offset: number, limit: number): Promise<IdentitiesResponseDTO[]> {
         const query = `SELECT 
                             ${chainRepository.tableName}.chain_name,
-                            ${this.tableName}.display, 
-                            ${this.tableName}.legal, 
-                            ${this.tableName}.address,
-                            ${this.tableName}.riot,
-                            ${this.tableName}.twitter,
-                            ${this.tableName}.web,
-                            ${this.tableName}.email
+                            ${this.tableName}.* 
                        FROM ${this.tableName}
                        INNER JOIN ${accountRepository.tableName} ON ${this.tableName}.account_id = ${accountRepository.tableName}.id 
                        INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id

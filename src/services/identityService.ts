@@ -22,9 +22,10 @@ export const identityService = {
             const searchResults = await identityRepository.searchByWsProviderAndKey(wsProvider, searchKey, offset, limit);
             if(searchResults.length > 0) {
                 searchResults.forEach(function(value) {
-                    const basicInfo: BasicIdentityInfo = value;
+                    const { display, email, legal, riot, twitter, web, address } = value;
+                    const basicInfo: BasicIdentityInfo = { display, email, legal, riot, twitter, web, address };
                     const chain = value.chainName;
-                    const identity : Identity = { chain, basicInfo };
+                    const identity: Identity = { chain, basicInfo };
                     items.push(identity);
                 });
             }
