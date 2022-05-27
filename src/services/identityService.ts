@@ -21,10 +21,9 @@ export const identityService = {
             const offset = (pageNum - 1) * limit;
             const searchResults = await identityRepository.searchByWsProviderAndKey(wsProvider, searchKey, offset, limit);
             if(searchResults.length > 0) {
-                const chainName = Object.values(JSON.parse(JSON.stringify(searchResults[0])))[0] as string;
                 searchResults.forEach(function(value) {
                     const basicInfo: BasicIdentityInfo = value;
-                    const chain = chainName;
+                    const chain = value.chainName;
                     const identity : Identity = { chain, basicInfo };
                     items.push(identity);
                 });

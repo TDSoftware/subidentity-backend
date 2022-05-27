@@ -8,6 +8,7 @@ import { IdentityEntity } from "../types/entities/IdentityEntity";
 import { accountRepository } from "../repositories/accountRepository";
 import { Identity } from "@npmjs_tdsoftware/subidentity";
 import { AccountEntity } from "../types/entities/AccountEntity";
+import { IdentitiesResponseDTO } from "../types/dtos/IdentitiesResponseDTO";
 
 class IdentityRepository extends MySQLRepository<IdentityEntity> {
     get tableName(): string {
@@ -34,7 +35,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
         return resultJson[0] as number;
     }
 
-    async searchByWsProviderAndKey(wsProvider: string, searchKey: string, offset: number, limit: number): Promise<IdentityEntity[]> {
+    async searchByWsProviderAndKey(wsProvider: string, searchKey: string, offset: number, limit: number): Promise<IdentitiesResponseDTO[]> {
         const query = `SELECT 
                             ${chainRepository.tableName}.chain_name,
                             ${this.tableName}.display, 
@@ -58,7 +59,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                             OR ${this.tableName}.email LIKE "%${searchKey}%")
                         ORDER BY ${this.tableName}.id
                         LIMIT ${escape(offset)},${escape(limit)}`;
-        return (await runSelectQuery<IdentityEntity>(query));
+        return (await runSelectQuery<IdentitiesResponseDTO>(query));
     }
 
     async insertOrUpdateAll(identities: Identity[], chainId: number): Promise<QueryResult> {
