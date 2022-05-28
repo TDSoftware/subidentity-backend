@@ -25,7 +25,7 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
             c.id,
             FIRST_VALUE(ws.address) OVER ( PARTITION BY c.id ORDER BY ws.id ) as ws_provider
         FROM ${this.tableName} AS c
-        INNER JOIN ${wsProviderRepository.tableName} AS ws ON ws.chain_id = c.id`
+        INNER JOIN ${wsProviderRepository.tableName} AS ws ON ws.chain_id = c.id`;
         return (await runSelectQuery<{id: number,ws_provider: string}>(query));
     }
 }
