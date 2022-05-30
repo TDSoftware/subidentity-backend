@@ -10,7 +10,7 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
         return "chain";
     }
 
-    async findByWsProvider(wsProvider: string): Promise<ChainEntity|undefined> {
+    async findByWsProvider(wsProvider: string): Promise<ChainEntity | undefined> {
         const query = `SELECT ${this.tableName}.chain_name, ${this.tableName}.status, ${this.tableName}.is_archive_node
                        FROM ${this.tableName} 
                        INNER JOIN ${wsProviderRepository.tableName} ON ${this.tableName}.id = ${wsProviderRepository.tableName}.chain_id
@@ -20,13 +20,13 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
 
 
     async getAllWithFirstWsProvider(): Promise<ChainsWsProvider[]> {
-        const query = 
-        `SELECT DISTINCT
+        const query =
+            `SELECT DISTINCT
             c.id,
             FIRST_VALUE(ws.address) OVER ( PARTITION BY c.id ORDER BY ws.id ) as ws_provider
         FROM ${this.tableName} AS c
         INNER JOIN ${wsProviderRepository.tableName} AS ws ON ws.chain_id = c.id`;
-        return (await runSelectQuery<{id: number,ws_provider: string}>(query));
+        return (await runSelectQuery<{ id: number, ws_provider: string }>(query));
     }
 }
 

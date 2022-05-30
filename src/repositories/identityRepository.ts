@@ -10,6 +10,7 @@ import { Identity } from "@npmjs_tdsoftware/subidentity";
 import { AccountEntity } from "../types/entities/AccountEntity";
 import { IdentitiesResponseDTO } from "../types/dtos/IdentitiesResponseDTO";
 
+
 class IdentityRepository extends MySQLRepository<IdentityEntity> {
     get tableName(): string {
         return "identity";
