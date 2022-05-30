@@ -24,7 +24,7 @@ export const identityService = {
                 searchResults.forEach(function(value) {
                     const { display, email, legal, riot, twitter, web, address } = value;
                     const basicInfo: BasicIdentityInfo = { display, email, legal, riot, twitter, web, address };
-                    const chain = value.chainName;
+                    const chain = value.chain_name;
                     const identity: Identity = { chain, basicInfo };
                     items.push(identity);
                 });
