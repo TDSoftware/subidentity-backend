@@ -83,6 +83,15 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
         )];
         return (await runInsertQuery(query, data));
     }
+
+    async findAllByChainId(chain_id: number): Promise<IdentityEntity[] | undefined> {
+        const query = `SELECT *
+                       FROM ${this.tableName}
+                       INNER JOIN ${accountRepository.tableName} ON ${this.tableName}.account_id = ${accountRepository.tableName}.id 
+                       WHERE ${accountRepository.tableName}.chain_id=${chain_id}`;
+        return (await runSelectQuery<IdentityEntity>(query));
+    }
+
 }
 
 export const identityRepository = new IdentityRepository();

@@ -4,6 +4,7 @@ import { identityRepository } from "../repositories/identityRepository";
 import { accountRepository } from "../repositories/accountRepository";
 import { getCompleteIdentities } from "@npmjs_tdsoftware/subidentity";
 import { ChainsWsProvider } from "../types/dtos/ChainsWsProvider";
+import { judgementRepository } from "../repositories/judgementRepository";
 
 
 export const schedulerService = {
@@ -18,7 +19,8 @@ export const schedulerService = {
             identityRepository.insertOrUpdateAll(
                 identities, chain.id
             );
-            //TODO: get and save judgements
+            judgementRepository.deleteAllByChainId(chain.id);
+            judgementRepository.insertAllFromIdentities(identities, chain.id);
         });
     }
 };

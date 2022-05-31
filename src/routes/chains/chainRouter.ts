@@ -15,6 +15,7 @@ chainRouter.get("/status", async (req: Request, res: Response, next: NextFunctio
             throw new Error("400:Query parameter missing:wsProvider");
         }
     } catch (e) {
-        next(e);
+        if (e instanceof Error && e.message === "Could not connect to endpoint.") next(new Error("503:" + e.message));
+        else next(e);
     }
 });
