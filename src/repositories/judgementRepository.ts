@@ -16,7 +16,7 @@ class JudgementRepository extends MySQLRepository<AccountEntity> {
         return (await runQuery(query));
     }
 
-    async insertAllFromIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
+    async insertAllFromIdentities(identities: Identity[], chainId: number): Promise<QueryResult | undefined> {
         const identityEntities = await identityRepository.findAllByChainId(chainId);
         const query = `INSERT INTO ${this.tableName}(
                         identity_id,
@@ -28,6 +28,7 @@ class JudgementRepository extends MySQLRepository<AccountEntity> {
         identities.filter((identity: Identity) => identity.judgements?.length != 0).forEach(async (identity: Identity) => {
             identity.judgements?.forEach(async (judgement: string) => data.push([identityEntities?.find((identitiy: IdentityEntity) => identitiy.address === identity.basicInfo.address)?.id, judgement, chainId]));
         });
+        if (data.length === 0) return;
         return (await runInsertQuery(query, [data]));
     }
 
