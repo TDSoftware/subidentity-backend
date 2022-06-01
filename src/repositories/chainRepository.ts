@@ -18,6 +18,11 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
         return (await runSelectQuery<ChainEntity>(query))[0];
     }
 
+    async findByChainName(chainName: string): Promise<ChainEntity|undefined> {
+        const query = `SELECT * FROM ${this.tableName} 
+                       WHERE ${this.tableName}.chain_name=${escape(chainName)}`;
+        return (await runSelectQuery<ChainEntity>(query))[0];
+    }
 
     async getAllWithFirstWsProvider(): Promise<ChainsWsProvider[]> {
         const query =

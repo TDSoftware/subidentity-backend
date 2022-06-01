@@ -9,10 +9,15 @@ import { wsProviderService } from "./wsProviderService";
 export const chainService = {
 
     async createChain(wsProvider: string): Promise<ChainStatusDTO|undefined> {
-        const isArchive = await isArchiveNode(wsProvider);
-        const implmentsIdentityPallet = await implementsIdentityPallet(wsProvider);
         const chainName = await getChainName(wsProvider);
+        const existingChain = await chainRepository.findByChainName(chainName);
+        if(existingChain) {
+            wsProviderService.createWsProvider(existingChain.id, wsProvider);
+            return chainMapper.toStatusDTO(existingChain, true);
+        }
 
+        const isArchive = await isArchiveNode(wsProvider);
+        const implmentsIdentityPallet = await implementsIdentityPallet(wsProvider);        
         if(isArchive && implmentsIdentityPallet) {
             const token: Token = await getTokenDetails(wsProvider);    
             const chain = {
