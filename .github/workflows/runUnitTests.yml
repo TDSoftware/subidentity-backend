@@ -18,15 +18,21 @@ jobs:
       matrix:
         node-version: [12.x, 14.x, 16.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    env:
+      DB_DATABASE: subidentity
+      DB_USER: root
+      DB_PASSWORD: root
 
     steps:
     - uses: actions/checkout@v3
-    - name: up mysql
-      run: docker-compose up -d
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - name: Set up MySQL
+      run: |
+        sudo /etc/init.d/mysql start
+        mysql -e 'CREATE DATABASE ${{ env.DB_DATABASE }};' -u${{ env.DB_USER }} -p${{ env.DB_PASSWORD }}
     - run: npm ci
     - run: npm run test
