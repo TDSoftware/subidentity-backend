@@ -7,6 +7,29 @@ const wsProvider = "ws://fake.io";
 const accountAddress = "ABCDEFGHI12345678";
 const searchKey = "fake-email";
 
+describe("GET /identities/:address", () => {
+
+    it("should throw error since wsProvider is missing in the query", async () => {
+        const response = await request().get("/identities/" + accountAddress);
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Query parameter missing:wsProvider");
+    });
+
+    it("should fetch a single identity for the wsProvider and account address", async () => {
+        let response = await request().get("/chains/status?wsProvider=" + wsProvider);
+        expect(response.statusCode).toBe(200);
+        await schedulerService.fetchIdentities();
+        response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
+        expect(response.statusCode).toBe(200);
+        expect(response.body.identity.basicInfo.address).toBe(accountAddress);
+        expect(response.body.identity.basicInfo.legal).toBe("fake-name");
+        expect(response.body.identity.basicInfo.email).toBe("fake-email");
+        expect(response.body.identity.basicInfo.riot).toBeUndefined();
+        expect(response.body.identity.basicInfo.display).toBe("fake-display");
+        expect(response.body.identity.chain).toBe("fake-chain-name");
+    });
+});
+
 describe("GET /identities", () => {
 
     it("should throw error since wsProvider is missing in the query", async () => {
@@ -40,7 +63,6 @@ describe("GET /identities", () => {
     });
 
     it("should fetch all the identities for the wsProvider", async () => {
-        await schedulerService.fetchIdentities();
         const response = await request().get("/identities?wsProvider=" + wsProvider + "&page=1&limit=10");
         expect(response.statusCode).toBe(200);
         expect(Array.isArray(response.body.identities.items)).toBe(true);
@@ -51,26 +73,6 @@ describe("GET /identities", () => {
         expect(response.body.identities.items[0].basicInfo.riot).toBeNull();
         expect(response.body.identities.items[0].basicInfo.display).toBe("fake-display");
         expect(response.body.identities.items[0].chain).toBe("fake-chain-name");
-    });
-});
-
-describe("GET /identities/:address", () => {
-
-    it("should throw error since wsProvider is missing in the query", async () => {
-        const response = await request().get("/identities/" + accountAddress);
-        expect(response.statusCode).toBe(400);
-        expect(response.body.error).toBe("Query parameter missing:wsProvider");
-    });
-
-    it("should fetch a single identity for the wsProvider and account address", async () => {
-        const response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
-        expect(response.statusCode).toBe(200);
-        expect(response.body.identity.basicInfo.address).toBe(accountAddress);
-        expect(response.body.identity.basicInfo.legal).toBe("fake-name");
-        expect(response.body.identity.basicInfo.email).toBe("fake-email");
-        expect(response.body.identity.basicInfo.riot).toBeUndefined();
-        expect(response.body.identity.basicInfo.display).toBe("fake-display");
-        expect(response.body.identity.chain).toBe("fake-chain-name");
     });
 });
 

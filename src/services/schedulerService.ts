@@ -18,7 +18,7 @@ export const schedulerService = {
                 await accountRepository.insertOrUpdateAccountsOfIdentities(
                     identities, chain.id
                 );
-                identityRepository.insertOrUpdateAll(
+                await identityRepository.insertOrUpdateAll(
                     identities, chain.id
                 );
                 identityService.deactivateIdentities(identities, chain.id);
