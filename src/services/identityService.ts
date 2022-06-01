@@ -54,6 +54,6 @@ export const identityService = {
                 identityEntity.active = false;
                 identityRepository.update(identityEntity);
             }
-        })
+        });
     }
 };
