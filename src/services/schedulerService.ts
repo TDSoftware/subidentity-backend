@@ -12,15 +12,20 @@ export const schedulerService = {
         const chains: ChainsWsProvider[] = await chainRepository.getAllWithFirstWsProvider();
         let identities;
         chains.forEach(async (chain: ChainsWsProvider) => {
-            identities = await getCompleteIdentities(chain.ws_provider);
-            await accountRepository.insertOrUpdateAccountsOfIdentities(
-                identities, chain.id
-            );
-            identityRepository.insertOrUpdateAll(
-                identities, chain.id
-            );
-            judgementRepository.deleteAllByChainId(chain.id);
-            judgementRepository.insertAllFromIdentities(identities, chain.id);
+            try {
+                identities = await getCompleteIdentities(chain.ws_provider);
+                await accountRepository.insertOrUpdateAccountsOfIdentities(
+                    identities, chain.id
+                );
+                identityRepository.insertOrUpdateAll(
+                    identities, chain.id
+                );
+                judgementRepository.deleteAllByChainId(chain.id);
+                judgementRepository.insertAllFromIdentities(identities, chain.id);
+            } catch (error) {
+                console.log("Could not fetch identities scheduled for " + chain.ws_provider);
+                if (error instanceof Error) console.log(error.message);
+            }
         });
     }
 };

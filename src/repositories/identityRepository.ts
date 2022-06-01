@@ -16,7 +16,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
         return "identity";
     }
 
-    async getRowCount(wsProvider: string, searchKey: string): Promise<number> {
+    async getRowCountForSearchkey(wsProvider: string, searchKey: string): Promise<number> {
         const query = `SELECT COUNT(*)
                         FROM ${this.tableName}
                         INNER JOIN ${accountRepository.tableName} ON ${this.tableName}.account_id = ${accountRepository.tableName}.id 
@@ -57,6 +57,33 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
         return (await runSelectQuery<IdentitiesResponseDTO>(query));
     }
 
+    async getRowCountForAllByWsProvider(wsProvider: string): Promise<number> {
+        const query = `SELECT COUNT(*)
+                        FROM ${this.tableName}
+                        INNER JOIN ${accountRepository.tableName} ON ${this.tableName}.account_id = ${accountRepository.tableName}.id 
+                        INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
+                        INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
+                        WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
+                        ORDER BY ${this.tableName}.id`;
+        const queryResult = (await runSelectQuery<number>(query))[0];
+        const resultJson = Object.values(JSON.parse(JSON.stringify(queryResult)));
+        return resultJson[0] as number;
+    }
+
+    async findAllByWsProvider(wsProvider: string, offset: number, limit: number): Promise<IdentitiesResponseDTO[]> {
+        const query = `SELECT 
+                            ${chainRepository.tableName}.chain_name,
+                            ${this.tableName}.* 
+                       FROM ${this.tableName}
+                       INNER JOIN ${accountRepository.tableName} ON ${this.tableName}.account_id = ${accountRepository.tableName}.id 
+                       INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
+                       INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
+                       WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
+                        ORDER BY ${this.tableName}.id
+                        LIMIT ${escape(offset)},${escape(limit)}`;
+        return (await runSelectQuery<IdentitiesResponseDTO>(query));
+    }
+
     async insertOrUpdateAll(identities: Identity[], chainId: number): Promise<QueryResult> {
         const accounts = await accountRepository.findAllByChainId(chainId);
         const query = `INSERT INTO ${this.tableName}(
@@ -91,7 +118,6 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                        WHERE ${accountRepository.tableName}.chain_id=${chain_id}`;
         return (await runSelectQuery<IdentityEntity>(query));
     }
-
 }
 
 export const identityRepository = new IdentityRepository();
