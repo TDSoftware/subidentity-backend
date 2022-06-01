@@ -2,7 +2,8 @@
 //  Apply environment variables from .env file to process.env. 
 //  Needs to be done at the very beginning!
 import { config } from "dotenv";
-config();
+if (process.env.NODE_ENV == "test") { console.log("hier"); config({ path: `./.env.${process.env.NODE_ENV}` }); }
+else config();
 
 import { json } from "body-parser";
 import express, { Application, NextFunction, Request, Response } from "express";
