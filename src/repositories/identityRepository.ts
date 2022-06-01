@@ -23,6 +23,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                         INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
                         INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                         WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
+                        AND ${this.tableName}.active is true
                         AND (${this.tableName}.display LIKE "%${searchKey}%" 
                             OR ${this.tableName}.legal LIKE "%${searchKey}%"
                             OR ${this.tableName}.address LIKE "%${searchKey}%"
@@ -45,6 +46,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                        INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
                        INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                        WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
+                       AND ${this.tableName}.active is true
                        AND (${this.tableName}.display LIKE "%${searchKey}%" 
                             OR ${this.tableName}.legal LIKE "%${searchKey}%"
                             OR ${this.tableName}.address LIKE "%${searchKey}%"
@@ -64,6 +66,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                         INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
                         INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                         WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
+                        AND ${this.tableName}.active is true
                         ORDER BY ${this.tableName}.id`;
         const queryResult = (await runSelectQuery<number>(query))[0];
         const resultJson = Object.values(JSON.parse(JSON.stringify(queryResult)));
@@ -79,6 +82,7 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
                        INNER JOIN ${chainRepository.tableName} ON ${accountRepository.tableName}.chain_id = ${chainRepository.tableName}.id
                        INNER JOIN ${wsProviderRepository.tableName} ON ${chainRepository.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                        WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}
+                       AND ${this.tableName}.active is true
                         ORDER BY ${this.tableName}.id
                         LIMIT ${escape(offset)},${escape(limit)}`;
         return (await runSelectQuery<IdentitiesResponseDTO>(query));
@@ -112,10 +116,11 @@ class IdentityRepository extends MySQLRepository<IdentityEntity> {
     }
 
     async findAllByChainId(chain_id: number): Promise<IdentityEntity[] | undefined> {
-        const query = `SELECT *
+        const query = `SELECT ${this.tableName}.*
                        FROM ${this.tableName}
                        INNER JOIN ${accountRepository.tableName} ON ${this.tableName}.account_id = ${accountRepository.tableName}.id 
-                       WHERE ${accountRepository.tableName}.chain_id=${chain_id}`;
+                       WHERE ${accountRepository.tableName}.chain_id=${chain_id}
+                       AND ${this.tableName}.active is true`;
         return (await runSelectQuery<IdentityEntity>(query));
     }
 }

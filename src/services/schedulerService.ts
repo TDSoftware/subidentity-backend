@@ -5,6 +5,7 @@ import { accountRepository } from "../repositories/accountRepository";
 import { getCompleteIdentities } from "@npmjs_tdsoftware/subidentity";
 import { ChainsWsProvider } from "../types/dtos/ChainsWsProvider";
 import { judgementRepository } from "../repositories/judgementRepository";
+import { identityService } from "./identityService";
 
 
 export const schedulerService = {
@@ -20,6 +21,7 @@ export const schedulerService = {
                 identityRepository.insertOrUpdateAll(
                     identities, chain.id
                 );
+                identityService.deactivateIdentities(identities, chain.id);
                 judgementRepository.deleteAllByChainId(chain.id);
                 judgementRepository.insertAllFromIdentities(identities, chain.id);
             } catch (error) {
