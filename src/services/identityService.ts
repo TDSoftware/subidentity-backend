@@ -3,6 +3,7 @@ import { BasicIdentityInfo } from "@npmjs_tdsoftware/subidentity";
 import { identityRepository } from "../repositories/identityRepository";
 import { IdentityEntity } from "../types/entities/IdentityEntity";
 import { paginationUtil } from "./utils/paginationUtil";
+import { u8aToString, hexToU8a } from "@polkadot/util";
 
 export const identityService = {
     async findOneByWsProviderAndAccountAddress(wsProvider: string, accountAddress: string): Promise<Identity | undefined> {
@@ -36,7 +37,10 @@ export const identityService = {
             const searchResults = await identityRepository.searchByWsProviderAndKey(wsProvider, searchKey, offset, limit);
             if (searchResults.length > 0) {
                 searchResults.forEach(function (value) {
-                    const { display, email, legal, riot, twitter, web, address } = value;
+                    let { display, email, legal, riot, twitter, web, address } = value;
+                    if (display && /^0x/.test(display)) {
+                        display = u8aToString(hexToU8a(display));
+                    }
                     const basicInfo: BasicIdentityInfo = { display, email, legal, riot, twitter, web, address };
                     const chain = value.chain_name;
                     const identity: Identity = { chain, basicInfo };
