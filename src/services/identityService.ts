@@ -37,7 +37,8 @@ export const identityService = {
             const searchResults = await identityRepository.searchByWsProviderAndKey(wsProvider, searchKey, offset, limit);
             if (searchResults.length > 0) {
                 searchResults.forEach(function (value) {
-                    let { display, email, legal, riot, twitter, web, address } = value;
+                    const { email, legal, riot, twitter, web, address } = value;
+                    let display = value.display;
                     if (display && /^0x/.test(display)) {
                         display = u8aToString(hexToU8a(display));
                     }
