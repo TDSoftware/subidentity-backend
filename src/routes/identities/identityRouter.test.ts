@@ -9,12 +9,6 @@ const searchKey = "fake-email";
 
 describe("GET /identities/:address", () => {
 
-    it("should throw error since wsProvider is missing in the query", async () => {
-        const response = await request().get("/identities/" + accountAddress);
-        expect(response.statusCode).toBe(400);
-        expect(response.body.error).toBe("Query parameter missing:wsProvider");
-    });
-
     it("should fetch a single identity for the wsProvider and account address", async () => {
         let response = await request().get("/chains/status?wsProvider=" + wsProvider);
         expect(response.statusCode).toBe(200);
@@ -28,6 +22,13 @@ describe("GET /identities/:address", () => {
         expect(response.body.identity.basicInfo.display).toBe("fake-display");
         expect(response.body.identity.chain).toBe("fake-chain-name");
     });
+
+    it("should throw error since wsProvider is missing in the query", async () => {
+        const response = await request().get("/identities/" + accountAddress);
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Query parameter missing:wsProvider");
+    });
+
 });
 
 describe("GET /identities", () => {

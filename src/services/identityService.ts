@@ -66,8 +66,8 @@ export const identityService = {
         });
     },
 
-    async checkWsProvider(wsProvider: string) {
-        let chain = await chainService.findByWsProvider(wsProvider);
+    async checkWsProvider(wsProvider: string): Promise<void> {
+        const chain = await chainService.findByWsProvider(wsProvider);
         if (!chain?.implementsIdentityPallet) throw new Error("400:Chain does not implement the identity pallet.");
         else if (!chain?.isArchiveNode) throw new Error("400:Provided node is not an archive node.");
         else if (!chain?.isIndexed) throw new Error("400:Chain is not indexed yet.");
