@@ -1,4 +1,4 @@
-import { IdentityEntity } from "../../types/entities/IdentityEntity"
+import { IdentityEntity } from "../../types/entities/IdentityEntity";
 import { IdentitiesResponseDTO } from "../../types/dtos/IdentitiesResponseDTO";
 
 
@@ -24,7 +24,7 @@ export const identityRepository = {
                 chain_name: "fake-chain-name"
             }
 
-        ]
+        ];
     },
 
     getRowCountForAllByWsProvider(): number {
@@ -50,6 +50,6 @@ export const identityRepository = {
                 email: "fake-email"
             }
 
-        ]
-    },
-}
+        ];
+    }
+};
