@@ -33,6 +33,7 @@ identityRouter.get("/search", async (req: Request, res: Response, next: NextFunc
             throw new Error("400:Query parameter missing:searchKey");
         }
     } catch (e) {
+        if (e instanceof Error && e.message === "Could not connect to endpoint.") next(new Error("503:" + e.message));
         next(e);
     }
 });
@@ -83,6 +84,7 @@ identityRouter.get("/", async (req: Request, res: Response, next: NextFunction) 
             identities
         });
     } catch (e) {
+        if (e instanceof Error && e.message === "Could not connect to endpoint.") next(new Error("503:" + e.message));
         next(e);
     }
 });
