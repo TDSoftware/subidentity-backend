@@ -1,6 +1,7 @@
 import { request, setupTests } from "../../lib/testSetup";
 import { schedulerService } from "../../services/schedulerService";
 
+jest.mock("../../repositories/identityRepository");
 setupTests();
 
 const wsProvider = "ws://fake.io";
@@ -71,7 +72,7 @@ describe("GET /identities", () => {
         expect(response.body.identities.items[0].basicInfo.address).toBe(accountAddress);
         expect(response.body.identities.items[0].basicInfo.legal).toBe("fake-name");
         expect(response.body.identities.items[0].basicInfo.email).toBe("fake-email");
-        expect(response.body.identities.items[0].basicInfo.riot).toBeNull();
+        expect(response.body.identities.items[0].basicInfo.riot).toBe("fake-riot");
         expect(response.body.identities.items[0].basicInfo.display).toBe("fake-display");
         expect(response.body.identities.items[0].chain).toBe("fake-chain-name");
     });
@@ -122,7 +123,7 @@ describe("GET /identities/search", () => {
         expect(response.body.identities.items[0].basicInfo.address).toBe(accountAddress);
         expect(response.body.identities.items[0].basicInfo.legal).toBe("fake-name");
         expect(response.body.identities.items[0].basicInfo.email).toBe("fake-email");
-        expect(response.body.identities.items[0].basicInfo.riot).toBeNull();
+        expect(response.body.identities.items[0].basicInfo.riot).toBe("fake-riot");
         expect(response.body.identities.items[0].basicInfo.display).toBe("fake-display");
         expect(response.body.identities.items[0].chain).toBe("fake-chain-name");
     });
