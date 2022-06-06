@@ -2,6 +2,7 @@ import { request, setupTests } from "../../lib/testSetup";
 import { schedulerService } from "../../services/schedulerService";
 
 jest.mock("../../repositories/identityRepository");
+jest.mock("../../repositories/chainRepository");
 setupTests();
 
 const wsProvider = "ws://fake.io";
@@ -11,10 +12,7 @@ const searchKey = "fake-email";
 describe("GET /identities/:address", () => {
 
     it("should fetch a single identity for the wsProvider and account address", async () => {
-        let response = await request().get("/chains/status?wsProvider=" + wsProvider);
-        expect(response.statusCode).toBe(200);
-        await schedulerService.fetchIdentities();
-        response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
+        const response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
         expect(response.statusCode).toBe(200);
         expect(response.body.identity.basicInfo.address).toBe(accountAddress);
         expect(response.body.identity.basicInfo.legal).toBe("fake-name");
