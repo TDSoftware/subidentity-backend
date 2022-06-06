@@ -1,6 +1,7 @@
 import { request, setupTests } from "../../lib/testSetup";
-import { schedulerService } from "../../services/schedulerService";
 
+jest.mock("../../repositories/identityRepository");
+jest.mock("../../repositories/chainRepository");
 setupTests();
 
 const wsProvider = "ws://fake.io";
@@ -9,17 +10,8 @@ const searchKey = "fake-email";
 
 describe("GET /identities/:address", () => {
 
-    it("should throw error since wsProvider is missing in the query", async () => {
-        const response = await request().get("/identities/" + accountAddress);
-        expect(response.statusCode).toBe(400);
-        expect(response.body.error).toBe("Query parameter missing:wsProvider");
-    });
-
     it("should fetch a single identity for the wsProvider and account address", async () => {
-        let response = await request().get("/chains/status?wsProvider=" + wsProvider);
-        expect(response.statusCode).toBe(200);
-        await schedulerService.fetchIdentities();
-        response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
+        const response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
         expect(response.statusCode).toBe(200);
         expect(response.body.identity.basicInfo.address).toBe(accountAddress);
         expect(response.body.identity.basicInfo.legal).toBe("fake-name");
@@ -28,6 +20,13 @@ describe("GET /identities/:address", () => {
         expect(response.body.identity.basicInfo.display).toBe("fake-display");
         expect(response.body.identity.chain).toBe("fake-chain-name");
     });
+
+    it("should throw error since wsProvider is missing in the query", async () => {
+        const response = await request().get("/identities/" + accountAddress);
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Query parameter missing:wsProvider");
+    });
+
 });
 
 describe("GET /identities", () => {
@@ -70,7 +69,7 @@ describe("GET /identities", () => {
         expect(response.body.identities.items[0].basicInfo.address).toBe(accountAddress);
         expect(response.body.identities.items[0].basicInfo.legal).toBe("fake-name");
         expect(response.body.identities.items[0].basicInfo.email).toBe("fake-email");
-        expect(response.body.identities.items[0].basicInfo.riot).toBeNull();
+        expect(response.body.identities.items[0].basicInfo.riot).toBe("fake-riot");
         expect(response.body.identities.items[0].basicInfo.display).toBe("fake-display");
         expect(response.body.identities.items[0].chain).toBe("fake-chain-name");
     });
@@ -121,7 +120,7 @@ describe("GET /identities/search", () => {
         expect(response.body.identities.items[0].basicInfo.address).toBe(accountAddress);
         expect(response.body.identities.items[0].basicInfo.legal).toBe("fake-name");
         expect(response.body.identities.items[0].basicInfo.email).toBe("fake-email");
-        expect(response.body.identities.items[0].basicInfo.riot).toBeNull();
+        expect(response.body.identities.items[0].basicInfo.riot).toBe("fake-riot");
         expect(response.body.identities.items[0].basicInfo.display).toBe("fake-display");
         expect(response.body.identities.items[0].chain).toBe("fake-chain-name");
     });
