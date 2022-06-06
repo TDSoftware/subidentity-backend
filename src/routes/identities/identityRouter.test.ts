@@ -1,5 +1,4 @@
 import { request, setupTests } from "../../lib/testSetup";
-import { schedulerService } from "../../services/schedulerService";
 
 jest.mock("../../repositories/identityRepository");
 jest.mock("../../repositories/chainRepository");

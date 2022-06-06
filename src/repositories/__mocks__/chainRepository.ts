@@ -12,6 +12,6 @@ export const chainRepository = {
             is_archive_node: true,
             created_at: new Date(),
             modified_at: new Date()
-        }
+        };
     }
-}
+};
