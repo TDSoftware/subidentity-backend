@@ -13,12 +13,12 @@ describe("GET /identities/:address", () => {
     it("should fetch a single identity for the wsProvider and account address", async () => {
         const response = await request().get("/identities/" + accountAddress + "?wsProvider=" + wsProvider);
         expect(response.statusCode).toBe(200);
-        expect(response.body.identity.basicInfo.address).toBe(accountAddress);
-        expect(response.body.identity.basicInfo.legal).toBe("fake-name");
-        expect(response.body.identity.basicInfo.email).toBe("fake-email");
-        expect(response.body.identity.basicInfo.riot).toBeUndefined();
-        expect(response.body.identity.basicInfo.display).toBe("fake-display");
-        expect(response.body.identity.chain).toBe("fake-chain-name");
+        expect(response.body.basicInfo.address).toBe(accountAddress);
+        expect(response.body.basicInfo.legal).toBe("fake-name");
+        expect(response.body.basicInfo.email).toBe("fake-email");
+        expect(response.body.basicInfo.riot).toBeUndefined();
+        expect(response.body.basicInfo.display).toBe("fake-display");
+        expect(response.body.chain).toBe("fake-chain-name");
     });
 
     it("should throw error since wsProvider is missing in the query", async () => {
