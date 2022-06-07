@@ -48,9 +48,9 @@ identityRouter.get("/:address", async (req: Request, res: Response, next: NextFu
 
         const identity: Identity | undefined = await identityService.findOneByWsProviderAndAccountAddress(req.query.wsProvider, req.params.address);
         if (!identity) throw new Error("404:Identity not found");
-        res.send({
+        res.send(
             identity
-        });
+        );
 
     } catch (e) {
         if (e instanceof Error && e.message === "Could not connect to endpoint.") next(new Error("503:" + e.message));
