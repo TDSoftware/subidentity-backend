@@ -11,10 +11,9 @@ import { ExtrinsicSection } from "../types/enums/ExtrinsicSection";
 import { BountyMethod } from "../types/enums/BountyMethod";
 import { BountyStatus } from "../types/enums/BountyStatus";
 import { bountyRepository } from "../repositories/bountyRepository";
-import { MotionProposalEntity } from "../types/entities/MotionProposalEntity";
 import { Exception } from "sass";
-import { motionProposalRepository } from "../repositories/motionProposalRepository";
 import { councilMotionRepository } from "../repositories/councilMotionRepository";
+import { testEnvironmentOptions } from "../../jest.config";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -29,11 +28,11 @@ export const indexingService = {
             console.log(new Date());
             process.exit(0);
         }
-        indexingService.parseBlock(block, blockHash);
+        indexingService.parseExtrinsic(block, blockHash)
+        //indexingService.parseBlock(block, blockHash);
     },
 
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
-        indexingService.readExtrinsics(blockHash)
         await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
     },
 
@@ -46,88 +45,41 @@ export const indexingService = {
         indexingService.readBlock(startHash.toString(), to);
     },
 
-    async readExtrinsics(blockhash: string): Promise<void> {
-        const currentBlock = await api.rpc.chain.getBlock(blockhash)
+    async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
+        // getting all extrinsics and all events for a block
+        const extrinsics = block.block.extrinsics
+        const blockEvents = await api.query.system.events.at(blockHash);
 
-        indexingService.readCouncilMotionData(currentBlock)
-    },
+        extrinsics.forEach((ex, index) =>{
+            // use index to get specific events for the current extrinsic
+            const extrinsicEvents = blockEvents.find(e => e.phase.asApplyExtrinsic.toNumber() == index)?.toHuman()
+            const extrinsicMethod = ex.method.method
+            const extrinsicSection = ex.method.section
 
-    //TODO focus on performance :D
-    // * * Motion Proposal should be created before Council Motion
-    // check if proposal for council motion already exists
-    // first create proposal object/ bounty/ treasury proposal
-    //TODO einmal durchgehen
-
-    
-    async readCouncilMotionData(block: SignedBlock): Promise<void> {
-        block.block.extrinsics.forEach((extrinsic) => {
-            if(extrinsic.method.section == ExtrinsicSection.COUNCIL && extrinsic.method.method == ExtrinsicMethod.CLOSE){
-                            
-                var proposalSection = extrinsic.method.args.proposal.section
-
-                if(proposalSection.toString() != ExtrinsicSection.BOUNTY || ExtrinsicSection.TREASURY) { 
-
-                    // get proposal hash and check if proposal motion already exist
-                    var councilMotionEntry: CouncilMotionEntity = <CouncilMotionEntity>{}
-                    var motionProposal: MotionProposalEntity = <MotionProposalEntity>{}
-                    councilMotionEntry.toBlock == block.block.header.number.toNumber()
-
-                    motionProposal.proposal_hash = extrinsic.method.args.proposalHash
-
-                    var savedProposal = motionProposalRepository.insert(motionProposal)
-                    savedProposal.then( (sp) =>{
-                        councilMotionEntry.proposal_id = sp.id
-                    })
-                    councilMotionEntry.proposal_type = "haha"
-                    councilMotionRepository.insert(councilMotionEntry)
-
-                } else {
-                    switch(proposalSection) {
-                        case ExtrinsicSection.BOUNTY: {
-                            break;
-                        }
-                        case ExtrinsicSection.TREASURY: {
-                            break;
-                        }
-                    }
-                }
+            if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.CLOSE) {
+                // do sth
             }
-        })
-    },
 
-    async readBounty(block: SignedBlock): Promise<void> {
-        block.block.extrinsics.forEach(async (extrinsic) => {
-            let allBounties = await bountyRepository.getAll()
-
-            allBounties.find(e => e.id == extrinsic.method.args.bounty_id)
-
-            if(extrinsic.method.section == ExtrinsicSection.BOUNTY){
-                switch(extrinsic.method.method){
-                    case BountyMethod.CLAIMBOUNTY: {
-                        if(allBounties.find(e => e.id == extrinsic.method.args.bounty_id) == null){
-                            let bounty: BountyEntity = <BountyEntity>{}
-                            bounty.id = extrinsic.method.args.bounty_id
-                            bounty.status = BountyStatus.CLAIMED
-                            break;
-                        } else {
-
-                        }
-                    }
-                    case BountyMethod.PROPOSEBOUNTY: {
-                        var thisBounty = allBounties.find(e => e.id == extrinsic.method.args.bounty_id)
-                        if (thisBounty != null){
-                            thisBounty.createdAt = block.block.header.number.toNumber()
-                            bountyRepository.update(thisBounty)
-                        } else {
-                            let bounty: BountyEntity = <BountyEntity>{}
-                            bounty.id = extrinsic.method.args.bounty_id
-                            bounty.status = BountyStatus.PROPOSED
-                            break;
-                        }
-                    }
-                }
+            if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.PROPOSE) {
+                // do sth
             }
+
+            if(extrinsicSection == ExtrinsicSection.BOUNTIES && extrinsicMethod == ExtrinsicMethod.PROPOSEBOUNTY) {
+                // do sth
+            }
+
+            if(extrinsicSection == ExtrinsicSection.TREASURY && extrinsicMethod == ExtrinsicMethod.PROPOSESPEND) {
+                // do sth
+            }
+
+            if(extrinsicSection == ExtrinsicSection.TIMESTAMP && extrinsicMethod == ExtrinsicMethod.SET) {
+                // do sth
+            }
+
+            if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.VOTE) {
+                // do sth
+            }
+
         })
     }
- 
 };

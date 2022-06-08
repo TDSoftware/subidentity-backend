@@ -1,7 +1,9 @@
 export interface CouncilMotionEntity {
     id: number;
-    proposal_id: number;
-    proposal_type: string;
-    fromBlock: number;
-    toBlock: number;
+    motion_hash: string;
+    method: string;
+    section: string;
+    proposed_by: string;
+    from_block: number;
+    to_block: number;
 }
