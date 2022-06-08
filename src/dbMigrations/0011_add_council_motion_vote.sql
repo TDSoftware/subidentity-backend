@@ -1,8 +1,8 @@
-CREATE TABLE council_motion_proposal_vote (
+CREATE TABLE council_motion_vote (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    block INT(11),
-    FOREIGN KEY(block) REFERENCES block(number),
-    voteUp BOOLEAN,
+    block BIGINT UNSIGNED,
+    FOREIGN KEY(block) REFERENCES block(id),
+    approved BOOLEAN,
     accountId INT(11) UNSIGNED,
     FOREIGN KEY(accountId) REFERENCES account(id)
 )

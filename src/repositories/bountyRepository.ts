@@ -8,4 +8,9 @@ class BountyRepository extends MySQLRepository<BountyEntity> {
     }
 }
 
+// SELECT COUNT FROM bounty WHERE bounty.id = ?
+
+
 export const bountyRepository = new BountyRepository();
+
+

@@ -2,8 +2,6 @@ export interface BountyEntity {
     id: number;
     status: string;
     value: number;
-    createdAt: Date;
-    description: string;
+    createdAt: number;
     proposer: string;
-    curator: string;
 }
