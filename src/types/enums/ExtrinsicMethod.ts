@@ -5,6 +5,7 @@ export enum ExtrinsicMethod {
     EXECUTED = "executed",
     VOTE = "vote",
     SET = "set",
-    PROPOSEBOUNTY = "Propose_bounty",
-    PROPOSESPEND = "Propose_spend"
+    PROPOSEBOUNTY = "proposeBounty",
+    PROPOSESPEND = "proposeSpend",
+    PROXY = "proxy"
 }

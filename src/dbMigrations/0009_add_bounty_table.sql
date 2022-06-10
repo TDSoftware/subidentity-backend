@@ -1,13 +1,15 @@
 CREATE TABLE bounty (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    councilMotionId BIGINT UNSIGNED,
-    FOREIGN KEY (councilMotionId) REFERENCES council_motion(id),
-    bountyId INT(11),
+    council_motion_id BIGINT UNSIGNED,
+    FOREIGN KEY (council_motion_id) REFERENCES council_motion(id),
+    chain_id INT(11) UNSIGNED,
+    FOREIGN KEY (chain_id) REFERENCES chain(id),
+    bounty_id INT(11),
     status VARCHAR(255),
-    value INT(11),
+    value BIGINT,
     description VARCHAR(255),
-    proposedAt BIGINT UNSIGNED,
-    FOREIGN KEY (proposedAt) REFERENCES block(id),
-    proposedBy INT(11) UNSIGNED,
-    FOREIGN KEY (proposedBy) REFERENCES account(id)
+    proposed_at BIGINT UNSIGNED,
+    FOREIGN KEY (proposed_at) REFERENCES block(id),
+    proposed_by INT(11) UNSIGNED,
+    FOREIGN KEY (proposed_by) REFERENCES account(id)
 )

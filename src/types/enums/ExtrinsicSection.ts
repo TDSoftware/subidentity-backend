@@ -3,5 +3,6 @@ export enum ExtrinsicSection {
     COUNCIL = "council",
     BOUNTIES = "bounties",
     TREASURY = "treasury",
-    TIMESTAMP = "timestamp"
+    TIMESTAMP = "timestamp",
+    PROXY = "proxy"
 }

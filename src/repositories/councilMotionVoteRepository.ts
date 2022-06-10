@@ -6,6 +6,11 @@ class CouncilMotionVoteRepository extends MySQLRepository<CouncilMotionVoteEntit
     get tableName(): string {
         return "council_motion_vote";
     }
+
+    async getByCouncilMotionIdAndAccountId(councilMotionId: number, accountId: number): Promise<CouncilMotionVoteEntity[]> {
+        const query = `SELECT id FROM ${this.tableName} WHERE ${this.tableName}.council_motion_id = ${councilMotionId} AND ${this.tableName}.account_id = "${accountId}" `;
+        return (await runSelectQuery<CouncilMotionVoteEntity>(query));
+    }
 }
 
 export const councilMotionVoteRepository = new CouncilMotionVoteRepository();

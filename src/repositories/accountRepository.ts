@@ -15,6 +15,11 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
         return (await runSelectQuery<AccountEntity>(query));
     }
 
+    async findByAddress(address: string): Promise<AccountEntity[]> {
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.address = "${address}" `;
+        return (await runSelectQuery<AccountEntity>(query));
+    }
+
     async insertOrUpdateAccountsOfIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
         const data = [identities.map((identity: Identity) => [identity.basicInfo.address, chainId])];
         const query = `INSERT IGNORE ${accountRepository.tableName}(
