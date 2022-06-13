@@ -48,8 +48,18 @@ export const indexingService = {
     },
 
     /*
-        TODO: handle proxy calls in general
-        this is a work in progress and not fully functional
+        TODO: refactor variable names
+        TODO: standardize JSON result handling (sometimes JSON.parse and sometimes just directly accessing arrays)
+        TODO: lots of code that is used several times, summarize duplicate code blocks into functions
+        TODO: instead of using insert and update SQL functions seperately, use updateOnInsertKeyDuplicate
+        TODO: increase performance by reducing the amount of times arrays have to be queried
+        TODO: structure the code better
+        TODO: rewrite the handling of proxy calls in the first forEach Block
+        TODO: take a range of blocks and test if the data saved to our db is aligned to what subscan has
+        TODO: use enums instead of strings for status fields
+
+        - This is just prototype code, can probably be cut to less than half the code
+        - this is a work in progress and not fully functional
     */
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         const extrinsics = block.block.extrinsics
@@ -57,7 +67,7 @@ export const indexingService = {
 
         extrinsics.forEach(async (ex, index) =>{
 
-            const extrinsicEvents = blockEvents.filter(e => e.phase.toString() != "Initialization" && e.phase.asApplyExtrinsic.toNumber() == index).map(ev => ev.event.toHuman())
+            const extrinsicEvents = blockEvents.filter(e => e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization"  && e.phase.asApplyExtrinsic.toNumber() == index).map(ev => ev.event.toHuman())
             const extrinsicMethod = ex.method.method
             const extrinsicSection = ex.method.section
             const extrinsicArgs = ex.args
@@ -67,76 +77,172 @@ export const indexingService = {
             || (extrinsicSection == ExtrinsicSection.PROXY && extrinsicMethod == ExtrinsicMethod.PROXY)) {
 
                 if(extrinsicSection == ExtrinsicSection.PROXY && extrinsicMethod == ExtrinsicMethod.PROXY){
-                    const proxyExtrinsic = JSON.parse(JSON.stringify(ex.args[2]))
-                    motionHash = proxyExtrinsic.args.proposal_hash
-                } else {
-                    motionHash = ex.args[0].toString()
-                }
+                    const proxyExtrinsic = JSON.parse(JSON.stringify(ex.args[2].toHuman()))
 
-                const result: CouncilMotionEntity[] = await councilMotionRepository.getByMotionHash(extrinsicArgs[0].toString())
-                const councilEvents = extrinsicEvents.filter(e => e.section == "council")
-                
-                if(result.length == 0) {
-                    const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{}
-                    councilMotion.motion_hash = motionHash
-                    const blockId = await blockRepository.getByBlockHash(blockHash)
-                    councilMotion.to_block = blockId.id
-                    councilMotion.chain_id = chain.id
-
-                    const councilEventMethod = councilEvents.map(ev => ev.method)
-
-                    if(councilEventMethod.some(ev => ev == "Approved")) {
-                        councilMotion.status = "approved"
-                    } else if(councilEventMethod.some(ev => ev == "Rejected")) {
-                        councilMotion.status = "rejected"
-                    } else if(councilEventMethod.some(ev => ev == "Disapproved")) {
-                        councilMotion.status = "disapproved"
-                    }
-
-                    councilMotionRepository.insert(councilMotion)
-
-                } else if(result.length > 0) {
-
-                }
-
-                const bountyEvents = extrinsicEvents.filter(e => e.section == "bounties")
-
-                bountyEvents.forEach(async (be, index) => {
-                    const bountyEventJSON = JSON.parse(JSON.stringify(be))
-                    const bountyId = bountyEventJSON.data[0]
-
-                    var bountyEntries = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id)
-
-                    if(bountyEntries.length == 0){
-                        const bounty: BountyEntity = <BountyEntity>{}
-
-                        switch(be.method){
-                            case "BountyRejected": {
-                                bounty.status = "rejected"
-                                break;
-                            }
-                            case "BountyClaimed": {
-                                bounty.status = "claimed"
-                                break;
-                            }
-                            case "BountyAwarded": {
-                                bounty.status = "awarded"
-                            }
-                            case "BountyAwarded": {
-                                bounty.status = "extended"
-                            }
+                    if(proxyExtrinsic.method == "close" && proxyExtrinsic.section == "council") {
+                        motionHash = String(proxyExtrinsic.args.proposal_hash)
+                        const result: CouncilMotionEntity[] = await councilMotionRepository.getByMotionHash(motionHash)
+                        const councilEvents = extrinsicEvents.filter(e => e.section == "council")
+                        
+                        const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{}
+                        councilMotion.motion_hash = motionHash
+                        const blockId = await blockRepository.getByBlockHash(blockHash)
+                        councilMotion.to_block = blockId.id
+                        councilMotion.chain_id = chain.id
+        
+                        const councilEventMethod = councilEvents.map(ev => ev.method)
+        
+                        if(councilEventMethod.some(ev => ev == "Approved")) {
+                            councilMotion.status = "approved"
+                        } else if(councilEventMethod.some(ev => ev == "Rejected")) {
+                            councilMotion.status = "rejected"
+                        } else if(councilEventMethod.some(ev => ev == "Disapproved")) {
+                            councilMotion.status = "disapproved"
                         }
-                        bounty.bounty_id = bountyId
+
+                        if(result.length == 0) {
+                            councilMotionRepository.insert(councilMotion)
+                        } else if(result.length > 0) {
+                            councilMotionRepository.update(councilMotion)
+                        }
+        
+                        const bountyEvents = extrinsicEvents.filter(e => e.section == "bounties")
+                        
+                        bountyEvents.forEach(async (be, index) => {
+                            const bountyEventJSON = JSON.parse(JSON.stringify(be))
+                            const bountyId = bountyEventJSON.data[0]
     
-                        bountyRepository.insert(bounty)
+                            var bountyEntries = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id)
+    
+                            if(bountyEntries.length == 0){
+                                const bounty: BountyEntity = <BountyEntity>{}
+    
+                                switch(be.method){
+                                    case "BountyRejected": {
+                                        bounty.status = "rejected"
+                                        break;
+                                    }
+                                    case "BountyClaimed": {
+                                        bounty.status = "claimed"
+                                        break;
+                                    }
+                                    case "BountyAwarded": {
+                                        bounty.status = "awarded"
+                                    }
+                                    case "BountyAwarded": {
+                                        bounty.status = "extended"
+                                    }
+                                }
+                                bounty.chain_id = chain.id
+                                bounty.bounty_id = bountyId
+                                bountyRepository.insert(bounty)
+                            }
+                        })
                     }
-                    // no need to update this, as this is the first queried extrinsic for bounties
-                })
+                }
+
+                if(extrinsicMethod != "proxy") {
+                    motionHash = ex.args[0].toString()
+                    const result: CouncilMotionEntity[] = await councilMotionRepository.getByMotionHash(extrinsicArgs[0].toString())
+                    const councilEvents = extrinsicEvents.filter(e => e.section == "council")
+                    
+                    if(result.length == 0) {
+                        const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{}
+                        councilMotion.motion_hash = motionHash
+                        const blockId = await blockRepository.getByBlockHash(blockHash)
+                        councilMotion.to_block = blockId.id
+                        councilMotion.chain_id = chain.id
+    
+                        const councilEventMethod = councilEvents.map(ev => ev.method)
+    
+                        if(councilEventMethod.some(ev => ev == "Approved")) {
+                            councilMotion.status = "approved"
+                        } else if(councilEventMethod.some(ev => ev == "Rejected")) {
+                            councilMotion.status = "rejected"
+                        } else if(councilEventMethod.some(ev => ev == "Disapproved")) {
+                            councilMotion.status = "disapproved"
+                        }
+                        councilMotionRepository.insert(councilMotion)
+    
+                    }
+                }
             }
 
             if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.PROPOSE) {
-                // council Motion stuff
-                // treasury proposal stuff
+                const proposal = JSON.parse(JSON.stringify(ex.method.args[1].toHuman()))
+                const proposalMethod = proposal.method
+                const proposalSection = proposal.section 
+                const proposeEvent = extrinsicEvents.find(e => e.method == "Proposed" && e.section == "council")
+                const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2]
+                var councilMotionEntries = await councilMotionRepository.getByMotionHash(councilMotionHash)
+                var councilMotionEntry = <CouncilMotionEntity>{}
+
+                if(councilMotionEntries.length > 0) {
+
+                    const entry = councilMotionEntries[0]
+                    entry.method = proposalMethod
+                    entry.section = proposalSection
+                    const proposer = await accountRepository.findByAddress(JSON.parse(JSON.stringify(ex.signer)).id)
+                    if(proposer.length > 0) {
+                        entry.proposed_by = proposer[0].id
+                    } else {
+                        const account: AccountEntity = <AccountEntity>{}
+                        account.address = JSON.parse(JSON.stringify(ex.signer)).id
+                        account.chain_id = chain.id
+                        const newEntry = await accountRepository.insert(account)
+                        entry.proposed_by = newEntry.id
+                    }
+                    const blockEntry = await blockRepository.getByBlockHash(blockHash)
+                    entry.from_block = blockEntry.id
+
+                    councilMotionRepository.update(entry)
+
+                } else if(councilMotionEntries.length == 0) {
+                    const councilMotion = <CouncilMotionEntity>{}
+                    councilMotion.chain_id = chain.id
+                    councilMotion.motion_hash = councilMotionHash
+                    councilMotion.method = proposalMethod
+                    councilMotion.section = proposalSection
+                    councilMotion.status = "proposed"
+                    const proposer = await accountRepository.findByAddress(JSON.parse(JSON.stringify(ex.signer)).id)
+                    if(proposer.length > 0) {
+                        councilMotion.proposed_by = proposer[0].id
+                    } else {
+                        const account: AccountEntity = <AccountEntity>{}
+                        account.address = JSON.parse(JSON.stringify(ex.signer)).id
+                        account.chain_id = chain.id
+                        const newEntry = await accountRepository.insert(account)
+                        councilMotion.proposed_by = newEntry.id
+                    }
+                    const blockEntry = await blockRepository.getByBlockHash(blockHash)
+                    councilMotion.from_block = blockEntry.id
+                    councilMotionEntry = await councilMotionRepository.insert(councilMotion)
+                }
+
+                if(proposalMethod == "approveProposal" && proposalSection == "treasury"){
+                    const proposalID = proposal.args.proposal_id
+                    const proposalEntries = await treasureProposalRepository.getByProposalIdAndChainId(proposalID, chain.id)
+                    councilMotionEntries = await councilMotionRepository.getByMotionHash(councilMotionHash)
+
+                    if(proposalEntries.length > 0) {
+                        councilMotionEntry = councilMotionEntries[0]
+                        const proposalEntry = proposalEntries[0]
+                        if(councilMotionEntries.length > 0) {
+                            proposalEntry.council_motion_id = councilMotionEntry.id
+                            await treasureProposalRepository.update(proposalEntry)
+                        }
+                    } else if(proposalEntries.length == 0) {
+                        const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{}
+                        treasuryProposal.proposal_id = proposalID
+                        treasuryProposal.status = "awarded"
+                        treasuryProposal.chain_id = chain.id
+                        if(councilMotionEntries.length > 0){
+                            treasuryProposal.council_motion_id = councilMotionEntry.id
+                        }
+                        treasureProposalRepository.insert(treasuryProposal)
+                    }
+
+                }
             }
 
             if(extrinsicSection == ExtrinsicSection.BOUNTIES && extrinsicMethod == ExtrinsicMethod.PROPOSEBOUNTY) {
@@ -150,7 +256,6 @@ export const indexingService = {
 
                     if(entryList.length > 0){
                         entry = entryList[0]
-
                     }
 
                     entry.bounty_id = bountyId
@@ -179,10 +284,8 @@ export const indexingService = {
                 })
             }
 
-
             if(extrinsicSection == ExtrinsicSection.TREASURY && extrinsicMethod == ExtrinsicMethod.PROPOSESPEND) {
                 const treasuryProposedEvents = extrinsicEvents.filter(e => e.section == "treasury" && e.method == "Proposed")
-                console.log("Treasury: ProposeSpend hit")
 
                 treasuryProposedEvents.forEach( async (tpe) => {
                     const proposalId = JSON.parse(JSON.stringify(tpe.data))[0]
@@ -255,11 +358,29 @@ export const indexingService = {
                     if(block != null){
                         const approved = ex.method.args[2].toString() == "true"
                         const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{}
-                        vote.account_id = accountId
+                        const voter = await accountRepository.findByAddress(accountId)
+
+                        if(voter.length > 0) {
+                            vote.account_id = voter[0].id
+                        } else {
+                            const account: AccountEntity = <AccountEntity>{}
+                            account.address = accountId
+                            account.chain_id = chain.id
+                            var accountEntry = await accountRepository.insert(account)
+                            vote.account_id = accountEntry.id
+                        }
                         vote.approved = approved
-                        vote.council_motion_id = councilMotion[0].id
+                        if(councilMotion.length > 0) {
+                           vote.council_motion_id = councilMotion[0].id
+                        } else {
+                            const councilMotionEntry = <CouncilMotionEntity>{}
+                            councilMotionEntry.chain_id = chain.id
+                            councilMotionEntry.motion_hash = motionHash
+                            var entry = await councilMotionRepository.insert(councilMotionEntry)
+                            vote.council_motion_id = entry.id
+                        }
                         vote.block = block.id
-                        councilMotionRepository.insert(vote)
+                        councilMotionVoteRepository.insert(vote)
                     }
                 }
             }

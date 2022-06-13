@@ -8,7 +8,7 @@ class CouncilMotionRepository extends MySQLRepository<CouncilMotionEntity> {
     }
 
     async getByMotionHash(motionHash: string): Promise<CouncilMotionEntity[]> {
-        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.motion_hash = "${motionHash}" `;
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.motion_hash = "${motionHash}"`;
         return (await runSelectQuery<CouncilMotionEntity>(query));
     }
 
