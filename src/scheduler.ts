@@ -1,3 +1,5 @@
+//  Apply environment variables from .env file to process.env. 
+//  Needs to be done at the very beginning!
 import { config } from "dotenv";
 config();
 

@@ -4,6 +4,7 @@ import { MySQLRepository } from "../lib/MySQLRepository";
 import { ChainEntity } from "../types/entities/ChainEntity";
 import { ChainsWsProvider } from "../types/dtos/ChainsWsProvider";
 import { wsProviderRepository } from "../repositories/wsProviderRepository";
+import { ChainStatus } from "../types/enums/ChainStatus";
 
 class ChainRepository extends MySQLRepository<ChainEntity> {
     get tableName(): string {
@@ -18,7 +19,7 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
         return (await runSelectQuery<ChainEntity>(query))[0];
     }
 
-    async findByChainName(chainName: string): Promise<ChainEntity|undefined> {
+    async findByChainName(chainName: string): Promise<ChainEntity | undefined> {
         const query = `SELECT * FROM ${this.tableName} 
                        WHERE ${this.tableName}.chain_name=${escape(chainName)}`;
         return (await runSelectQuery<ChainEntity>(query))[0];
@@ -28,10 +29,11 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
         const query =
             `SELECT DISTINCT
             c.id,
+            c.status,
             FIRST_VALUE(ws.address) OVER ( PARTITION BY c.id ORDER BY ws.id ) as ws_provider
         FROM ${this.tableName} AS c
         INNER JOIN ${wsProviderRepository.tableName} AS ws ON ws.chain_id = c.id`;
-        return (await runSelectQuery<{ id: number, ws_provider: string }>(query));
+        return (await runSelectQuery<{ id: number, status: ChainStatus, ws_provider: string }>(query));
     }
 }
 

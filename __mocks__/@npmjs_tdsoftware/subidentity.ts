@@ -24,11 +24,11 @@ module.exports = {
                     "legal": "fake-name",
                     "email": "fake-email",
                     "riot": undefined,
-                    "display": "fake-display",
+                    "display": "fake-display"
                 },
                 "chain": "fake-chain-name"
             }
-        ]
+        ];
     },
     getIdentity(): Identity {
         return {
@@ -42,6 +42,6 @@ module.exports = {
                 "web": undefined
             },
             "chain": "fake-chain-name"
-        }
+        };
     }
 }; 

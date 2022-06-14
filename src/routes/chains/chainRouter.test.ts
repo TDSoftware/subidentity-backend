@@ -10,7 +10,6 @@ describe("GET /chains/status", () => {
     it("should fetch the chain status", async () => {
         const response = await request().get("/chains/status?wsProvider=" + wsProvider);
         expect(response.statusCode).toBe(200);
-        expect(response.body.chainStatus.isIndexed).toBe(false);
         expect(response.body.chainStatus.isArchiveNode).toBe(true);
         expect(response.body.chainStatus.implementsIdentityPallet).toBe(true);
         expect(response.body.chainStatus.chainName).toBe("fake-chain-name");
