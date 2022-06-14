@@ -3,6 +3,13 @@ import { chainService } from "../../services/chainService";
 import { ChainStatusDTO } from "../../types/dtos/ChainStatusDTO";
 export const chainRouter = Router();
 
+/**
+ * GET /chains/status
+ * get chain status information for a given wsProvider
+ * @param req Request containing wsProvider
+ * @throws 400 Error when wsProvider is missing or the status request failed or a 503 Error if a connection to the endpoint could not be established
+ * @returns requested chain status
+ */
 chainRouter.get("/status", async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.query.wsProvider === "string") {
