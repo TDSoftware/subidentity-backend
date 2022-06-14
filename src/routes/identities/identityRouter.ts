@@ -4,6 +4,13 @@ import { Identity, Page } from "@npmjs_tdsoftware/subidentity";
 
 export const identityRouter = Router();
 
+/**
+ * GET /identities/search
+ * search for identitites in a selected substrate based chain 
+ * @param req Request containing wsProvider, searchKey, page and limit as query parameter
+ * @throws 400 Error when pagination details are invalid, wsProvider or search key are missing or a 503 Error if a connection to the endpoint could not be established
+ * @returns requested page with identitites matching search query
+ */
 identityRouter.get("/search", async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.query.wsProvider !== "string")
@@ -38,6 +45,13 @@ identityRouter.get("/search", async (req: Request, res: Response, next: NextFunc
     }
 });
 
+/**
+ * GET /identities/:address
+ * fetch an Identity from a selected substrate based chain and address
+ * @param req Request containing wsProvider and address
+ * @throws 400 Error when wsProvider or address are missing or 503 Error when a connection to the endpoint could not be established
+ * @returns requested identity with the provided address
+ */
 identityRouter.get("/:address", async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.params.address !== "string")
@@ -59,6 +73,13 @@ identityRouter.get("/:address", async (req: Request, res: Response, next: NextFu
     }
 });
 
+/**
+ * GET /identities
+ * fetch identitites from a selected substrate based chain 
+ * @param req Request containing wsProvider, page and limit as query parameter
+ * @throws 400 Error when pagination details are invalid, or wsProvider is missing or a 503 Error if a connection to the endpoint could not be established
+ * @returns requested page with identitites
+ */
 identityRouter.get("/", async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.query.wsProvider !== "string") {
