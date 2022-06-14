@@ -77,7 +77,7 @@ In this chapter the available API is described. `http://localhost:5001/` is the 
 
 
 ### getIdentities
-Returns a page of all identities of the chain of the provided wsProvider. Adjust the value for `wsProvider` to query from the respective chain of the given node endpoint. Adjust the value for `page` (page index to load) and `limit` (how many items on one page) to your needs.
+Returns a page of all identities of the chain of the provided wsProvider. Adjust the value for `wsProvider` to query from the respective chain of the given node endpoint. Adjust the value for `page` (page index to load, ℹ️ index of first page is 1) and `limit` (how many items on one page) to your needs.
 
 Example request:
 ```
@@ -85,7 +85,7 @@ curl --location -g --request GET 'http://localhost:5001/identities?wsProvider=ws
 ```
 
 ### searchIdentities
-Returns a page of identities of the chain of the provided wsProvider fitting the search term. Adjust the value for `wsProvider` to query the corresponding chain of the specified node endpoint, replace `SEARCHKEY` with the desired search term and adjust the value for `page` (page index to load) and `limit` (how many items on one page) to your needs.
+Returns a page of identities of the chain of the provided wsProvider fitting the search term. Adjust the value for `wsProvider` to query the corresponding chain of the specified node endpoint, replace `SEARCHKEY` with the desired search term and adjust the value for `page` (page index to load, ℹ️ index of first page is 1) and `limit` (how many items on one page) to your needs.
 
 Example request:
 ```

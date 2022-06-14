@@ -57,15 +57,14 @@ export const identityService = {
     },
 
     async deactivateIdentities(identities: Identity[], chainId: number): Promise<void> {
-        if (identities.length > 0 && "basicInfo" in identities[0]) {
-            const identityEntities = await identityRepository.findAllByChainId(chainId);
-            identityEntities?.forEach((identityEntity: IdentityEntity) => {
-                if (identities.findIndex((identity: Identity) => identityEntity.address === identity.basicInfo.address) === -1) {
-                    identityEntity.active = false;
-                    identityRepository.update(identityEntity);
-                }
-            });
-        }
+        if (identities.length < 1 || !("basicInfo" in identities[0])) return;
+        const identityEntities = await identityRepository.findAllByChainId(chainId);
+        identityEntities?.forEach((identityEntity: IdentityEntity) => {
+            if (identities.findIndex((identity: Identity) => identityEntity.address === identity.basicInfo.address) === -1) {
+                identityEntity.active = false;
+                identityRepository.update(identityEntity);
+            }
+        });
     },
 
     async checkWsProvider(wsProvider: string): Promise<void> {
