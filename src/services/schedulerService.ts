@@ -13,10 +13,9 @@ import { chainService } from "./chainService";
 export const schedulerService = {
     async fetchIdentities(): Promise<void> {
         const chains: ChainsWsProvider[] = await chainRepository.getAllWithFirstWsProvider();
-        let identities;
         chains.forEach(async (chain: ChainsWsProvider) => {
             try {
-                identities = await getCompleteIdentities(chain.ws_provider);
+                let identities = await getCompleteIdentities(chain.ws_provider);
                 await accountRepository.insertOrUpdateAccountsOfIdentities(
                     identities, chain.id
                 );
