@@ -15,7 +15,7 @@ export const schedulerService = {
         const chains: ChainsWsProvider[] = await chainRepository.getAllWithFirstWsProvider();
         chains.forEach(async (chain: ChainsWsProvider) => {
             try {
-                let identities = await getCompleteIdentities(chain.ws_provider);
+                const identities = await getCompleteIdentities(chain.ws_provider);
                 await accountRepository.insertOrUpdateAccountsOfIdentities(
                     identities, chain.id
                 );
