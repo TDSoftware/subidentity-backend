@@ -16,15 +16,17 @@ export const schedulerService = {
         chains.forEach(async (chain: ChainsWsProvider) => {
             try {
                 const identities = await getCompleteIdentities(chain.ws_provider);
-                await accountRepository.insertOrUpdateAccountsOfIdentities(
-                    identities, chain.id
-                );
-                await identityRepository.insertOrUpdateAll(
-                    identities, chain.id
-                );
+                if (identities.length > 0) {
+                    await accountRepository.insertOrUpdateAccountsOfIdentities(
+                        identities, chain.id
+                    );
+                    await identityRepository.insertOrUpdateAll(
+                        identities, chain.id
+                    );
+                    judgementRepository.deleteAllByChainId(chain.id);
+                    judgementRepository.insertAllFromIdentities(identities, chain.id);
+                }
                 identityService.deactivateIdentities(identities, chain.id);
-                judgementRepository.deleteAllByChainId(chain.id);
-                judgementRepository.insertAllFromIdentities(identities, chain.id);
                 if (chain.status !== ChainStatus.Indexed) await chainService.updateChainStatus(chain.id, ChainStatus.Indexed);
             } catch (error) {
                 console.log("Could not fetch identities scheduled for " + chain.ws_provider);

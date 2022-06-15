@@ -57,7 +57,6 @@ export const identityService = {
     },
 
     async deactivateIdentities(identities: Identity[], chainId: number): Promise<void> {
-        if (identities.length < 1 || !("basicInfo" in identities[0])) return;
         const identityEntities = await identityRepository.findAllByChainId(chainId);
         identityEntities?.forEach((identityEntity: IdentityEntity) => {
             if (identities.findIndex((identity: Identity) => identityEntity.address === identity.basicInfo.address) === -1) {
