@@ -16,6 +16,9 @@ import { CouncilMotionVoteEntity } from "../types/entities/CouncilMotionVoteEnti
 import { treasureProposalRepository } from "../repositories/treasuryProposalRepository";
 import { accountRepository } from "../repositories/accountRepository";
 import { AccountEntity } from "../types/entities/AccountEntity";
+import { CouncilMotionStatus } from "../types/enums/CouncilMotionStatus";
+import { BountyStatus } from "../types/enums/BountyStatus";
+import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -35,7 +38,7 @@ export const indexingService = {
 
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
         await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
-        indexingService.parseExtrinsic(block, blockHash)
+        await indexingService.parseExtrinsic(block, blockHash)
     },
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
@@ -56,7 +59,6 @@ export const indexingService = {
         TODO: structure the code better
         TODO: rewrite the handling of proxy calls in the first forEach Block
         TODO: take a range of blocks and test if the data saved to our db is aligned to what subscan has
-        TODO: use enums instead of strings for status fields
 
         - This is just prototype code, can probably be cut to less than half the code
         - this is a work in progress and not fully functional
@@ -66,7 +68,6 @@ export const indexingService = {
         const blockEvents = await api.query.system.events.at(blockHash);
 
         extrinsics.forEach(async (ex, index) =>{
-
             const extrinsicEvents = blockEvents.filter(e => e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization"  && e.phase.asApplyExtrinsic.toNumber() == index).map(ev => ev.event.toHuman())
             const extrinsicMethod = ex.method.method
             const extrinsicSection = ex.method.section
@@ -93,11 +94,11 @@ export const indexingService = {
                         const councilEventMethod = councilEvents.map(ev => ev.method)
         
                         if(councilEventMethod.some(ev => ev == "Approved")) {
-                            councilMotion.status = "approved"
+                            councilMotion.status = CouncilMotionStatus.Approved
                         } else if(councilEventMethod.some(ev => ev == "Rejected")) {
-                            councilMotion.status = "rejected"
+                            councilMotion.status = CouncilMotionStatus.Rejected
                         } else if(councilEventMethod.some(ev => ev == "Disapproved")) {
-                            councilMotion.status = "disapproved"
+                            councilMotion.status = CouncilMotionStatus.Disapproved
                         }
 
                         if(result.length == 0) {
@@ -119,18 +120,18 @@ export const indexingService = {
     
                                 switch(be.method){
                                     case "BountyRejected": {
-                                        bounty.status = "rejected"
+                                        bounty.status = BountyStatus.Rejected
                                         break;
                                     }
                                     case "BountyClaimed": {
-                                        bounty.status = "claimed"
+                                        bounty.status = BountyStatus.Claimed
                                         break;
                                     }
                                     case "BountyAwarded": {
-                                        bounty.status = "awarded"
+                                        bounty.status = BountyStatus.Awarded
                                     }
-                                    case "BountyAwarded": {
-                                        bounty.status = "extended"
+                                    case "BountyExtended": {
+                                        bounty.status = BountyStatus.Extended
                                     }
                                 }
                                 bounty.chain_id = chain.id
@@ -156,11 +157,11 @@ export const indexingService = {
                         const councilEventMethod = councilEvents.map(ev => ev.method)
     
                         if(councilEventMethod.some(ev => ev == "Approved")) {
-                            councilMotion.status = "approved"
+                            councilMotion.status = CouncilMotionStatus.Approved
                         } else if(councilEventMethod.some(ev => ev == "Rejected")) {
-                            councilMotion.status = "rejected"
+                            councilMotion.status = CouncilMotionStatus.Rejected
                         } else if(councilEventMethod.some(ev => ev == "Disapproved")) {
-                            councilMotion.status = "disapproved"
+                            councilMotion.status = CouncilMotionStatus.Disapproved
                         }
                         councilMotionRepository.insert(councilMotion)
     
@@ -203,7 +204,7 @@ export const indexingService = {
                     councilMotion.motion_hash = councilMotionHash
                     councilMotion.method = proposalMethod
                     councilMotion.section = proposalSection
-                    councilMotion.status = "proposed"
+                    councilMotion.status = CouncilMotionStatus.Proposed
                     const proposer = await accountRepository.findByAddress(JSON.parse(JSON.stringify(ex.signer)).id)
                     if(proposer.length > 0) {
                         councilMotion.proposed_by = proposer[0].id
@@ -234,7 +235,11 @@ export const indexingService = {
                     } else if(proposalEntries.length == 0) {
                         const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{}
                         treasuryProposal.proposal_id = proposalID
-                        treasuryProposal.status = "awarded"
+                        if(extrinsicEvents.find(e => e.method == "Awarded" && e.section == "treasury")){
+                            treasuryProposal.status = TreasuryProposalStatus.Awarded
+                        } else {
+                            treasuryProposal.status = TreasuryProposalStatus.Proposed
+                        }
                         treasuryProposal.chain_id = chain.id
                         if(councilMotionEntries.length > 0){
                             treasuryProposal.council_motion_id = councilMotionEntry.id
@@ -252,7 +257,7 @@ export const indexingService = {
                     const entryList = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id)
 
                     var entry: BountyEntity = <BountyEntity>{}
-                    entry.status = "proposed"
+                    entry.status = BountyStatus.Proposed
 
                     if(entryList.length > 0){
                         entry = entryList[0]
@@ -324,7 +329,7 @@ export const indexingService = {
                         const existingProposal = await treasureProposalRepository.getByProposalIdAndChainId(treasuryEventJSON.data[0], chain.id)
                         if(existingProposal.length == 0) {
                             const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity> {}
-                            treasuryProposal.status = "awarded"
+                            treasuryProposal.status = TreasuryProposalStatus.Awarded
                             treasuryProposal.proposal_id = treasuryEventJSON.data[0]
                             const beneficiaryAccount = await accountRepository.findByAddress(treasuryEventJSON.data[2])
 
