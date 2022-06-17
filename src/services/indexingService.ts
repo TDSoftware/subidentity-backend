@@ -54,9 +54,26 @@ export const indexingService = {
 
     /*
         TODO: lots of code that is used several times, summarize duplicate code blocks into functions
-        TODO: take a range of blocks and test if the data saved to our db is aligned to what subscan has
         TODO: if(exists) else if(!exists) is often used, can be shortened a lot
-        TODO: 
+        TODO: instead of several insert/ update db calls, use ON DUPLICATE KEY UPDATE
+        TODO: extensive testing, if the saved data matches what e.g. subscan has
+        TODO: DTOs, mappers instead of using entities
+
+        ? does this work properly if you run the process on multiple threads
+
+        - run by adding this to package.json: "dev-indexer": "nodemon src/indexer.ts --from=xxxxxxx --to=xxxxxxx"
+        
+        The whole parseExtrinsic function basically has the same steps every if clause:
+
+            - get all extrinsics from block
+            - get all events for this block (only actual request, rest is internal)
+            - Then for each extrinsic in the current block:
+                1. if extrinsic method and extrinsic sections are ...   
+                2. filter relevant events from the extrinsicEvents
+                3. get data from the events and extrinsic payloads, create db entities
+                4. check if the relevant db entries for foreign keys exist, if not create
+                5. insert or update entities for the db (TODO: mappers, dto?)
+            - (some require special handling)
     */
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         const apiAt = await api.at(blockHash)
@@ -74,6 +91,7 @@ export const indexingService = {
 
             // handles proxy calls, which have the actual call inside them, so we assign these calls as the currently queried extrinsic
             if(extrinsicSection == ExtrinsicSection.PROXY && extrinsicSection== ExtrinsicMethod.PROXY) {
+                // extrinsic here equals ex.method in a normal extrinsic
                 extrinsic = extrinsic.method.args.call
                 if(extrinsic){
                     extrinsicMethod = extrinsic.method
@@ -328,21 +346,21 @@ export const indexingService = {
                 const initializationEvents = blockEvents.filter(e => e.phase.toString() == "Initialization").map(ev => ev.event.toHuman())
                 const treasuryEvents = initializationEvents.filter(e => e.section == EventSection.Treasury && e.method == EventMethod.Awarded)
 
-                if(treasuryEvents.length > 0) {
+                if(treasuryEvents) {
                     treasuryEvents.forEach(async (te) => {
-                        const treasuryEventJSON = JSON.parse(JSON.stringify(te))
-                        const existingProposal = await treasureProposalRepository.getByProposalIdAndChainId(treasuryEventJSON.data[0], chain.id)
-                        if(existingProposal) {
-                            const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity> {}
+                        const treasuryEvent = JSON.parse(JSON.stringify(te))
+                        const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity> {}
+                        const existingProposal = await treasureProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id)
+                        if(!existingProposal) {
                             treasuryProposal.status = TreasuryProposalStatus.Awarded
-                            treasuryProposal.proposal_id = treasuryEventJSON.data[0]
-                            const beneficiaryAccount = await accountRepository.findByAddressAndChain(treasuryEventJSON.data[2], chain.id)
+                            treasuryProposal.proposal_id = treasuryEvent.data[0]
+                            const beneficiaryAccount = await accountRepository.findByAddressAndChain(treasuryEvent.data[2], chain.id)
 
                             if(beneficiaryAccount) {
                                 treasuryProposal.beneficiary = beneficiaryAccount.id
                             } else {
                                 const account: AccountEntity = <AccountEntity>{}
-                                account.address = treasuryEventJSON.data[2]
+                                account.address = treasuryEvent.data[2]
                                 account.chain_id = chain.id
                                 var accountEntry = await accountRepository.insert(account)
                                 treasuryProposal.beneficiary = accountEntry.id
@@ -356,6 +374,7 @@ export const indexingService = {
 
             /*
                 this section fetches claimed bounties (last step so no update needed)
+                only gets event, as we don't need any data from the extrinsic itself (only really need the status)
             */
             const claimedEvents = extrinsicEvents.filter(ev => ev.section == EventSection.Bounties && ev.method == EventMethod.BountyClaimed)
             if(claimedEvents) {
@@ -370,7 +389,7 @@ export const indexingService = {
             }
 
             /*
-                this section fetches the votes
+                this section fetches the votes, pretty straight forward
             */
             if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.VOTE) {
                 const accountId = (JSON.parse(JSON.stringify(ex.signer)).id).toString()
