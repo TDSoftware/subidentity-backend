@@ -55,18 +55,24 @@ export const indexingService = {
     /*
         TODO: lots of code that is used several times, summarize duplicate code blocks into functions
         TODO: take a range of blocks and test if the data saved to our db is aligned to what subscan has
-
+        TODO: if(exists) else if(!exists) is often used, can be shortened a lot
+        TODO: 
     */
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
+        const apiAt = await api.at(blockHash)
         const extrinsics = block.block.extrinsics
-        const blockEvents = await api.query.system.events.at(blockHash);
+        const blockEvents = await apiAt.query.system.events()
 
         extrinsics.forEach(async (ex, index) =>{
             var extrinsic = JSON.parse(JSON.stringify(ex.toHuman()))
             var extrinsicMethod = extrinsic.method.method
             var extrinsicSection = extrinsic.method.section
+
+            // proxy calls are slightly differently structured, but contain the same data 
+            // sometimes we have to handle them differently, rarely though
             var isProxyCall = false
 
+            // handles proxy calls, which have the actual call inside them, so we assign these calls as the currently queried extrinsic
             if(extrinsicSection == ExtrinsicSection.PROXY && extrinsicSection== ExtrinsicMethod.PROXY) {
                 extrinsic = extrinsic.method.args.call
                 if(extrinsic){
@@ -76,6 +82,7 @@ export const indexingService = {
                 isProxyCall = true
             }
 
+            // getting the actual events for the currently queried extrinsic (via index, check subscan) -> initialization and finalization excluded
             const extrinsicEvents = blockEvents.filter(e => e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization"  && e.phase.asApplyExtrinsic.toNumber() == index).map(ev => ev.event.toHuman())
 
             if((extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.CLOSE)) {
@@ -150,6 +157,10 @@ export const indexingService = {
                 })       
             }
 
+            /*
+                this section fetches the extrinsic where council motions are proposed
+                important for: council motion data, treasury proposals
+            */
             if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.PROPOSE) {
                 const proposal = extrinsic.method.args.proposal
                 const proposalMethod = proposal.method
@@ -160,12 +171,14 @@ export const indexingService = {
                 var councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash)
                 var proposer = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id)
 
+                //TODO this can be shortened by a lot (ON DUPLICATE KEY UPDATE?)
                 if(councilMotionEntry) {
                     console.log(councilMotionEntry)
                     const entry = councilMotionEntry
                     entry.method = proposalMethod
                     entry.section = proposalSection
                     entry.proposal_index = proposalIndex
+                    //TODO this can be either shortened or put into a seperate function as it is used often
                     if(proposer) {
                         entry.proposed_by = proposer.id
                     } else if(!proposer){
@@ -201,6 +214,7 @@ export const indexingService = {
                     councilMotionEntry = await councilMotionRepository.insert(councilMotion)
                 }
 
+                // proposal inside a council motion -> we can get treasury data from that
                 if(proposalMethod == ExtrinsicMethod.APPROVEPROPOSAL && proposalSection == ExtrinsicSection.TREASURY){
                     const proposalID = proposal.args.proposal_id
                     const proposalEntry = await treasureProposalRepository.getByProposalIdAndChainId(proposalID, chain.id)
@@ -230,12 +244,14 @@ export const indexingService = {
                 }
             }
 
+            /*
+                this section fetches the extrinsic where bounties are proposed. this is where we get the value, description and other important data
+            */
             if(extrinsicSection == ExtrinsicSection.BOUNTIES && extrinsicMethod == ExtrinsicMethod.PROPOSEBOUNTY) {
                 const bountiesProposedEvents = extrinsicEvents.filter(e => e.section == EventSection.Bounties && e.method == EventMethod.BountyProposed)
                 bountiesProposedEvents.forEach(async (bpe) => {
                     const bountyId = JSON.parse(JSON.stringify(bpe.data))[0]
                     const entryList = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id)
-
                     var entry: BountyEntity = <BountyEntity>{}
                     entry.status = BountyStatus.Proposed
 
@@ -262,6 +278,7 @@ export const indexingService = {
                     const blockId = await blockRepository.getByBlockHash(blockHash)
                     entry.proposed_at = blockId.id
 
+                    //TODO on Duplicate key update? 
                     if(entryList){
                         bountyRepository.update(entry)
                     } else {
@@ -271,6 +288,9 @@ export const indexingService = {
                 })
             }
 
+            /*
+                this section fetches the extrinsic where treasuries are proposed and updates/inserts them
+            */
             if(extrinsicSection == ExtrinsicSection.TREASURY && extrinsicMethod == ExtrinsicMethod.PROPOSESPEND) {
                 const treasuryProposedEvents = extrinsicEvents.filter(e => e.section == EventSection.Treasury && e.method == EventMethod.Proposed)
 
@@ -301,6 +321,9 @@ export const indexingService = {
 
             }
 
+            /*
+                this section fetches treasury events that were awarded (are awarded every 10000 (?) blocks, that's why its in the timestamp set extrinsic)
+            */
             if(extrinsicSection == ExtrinsicSection.TIMESTAMP && extrinsicMethod == ExtrinsicMethod.SET) {
                 const initializationEvents = blockEvents.filter(e => e.phase.toString() == "Initialization").map(ev => ev.event.toHuman())
                 const treasuryEvents = initializationEvents.filter(e => e.section == EventSection.Treasury && e.method == EventMethod.Awarded)
@@ -331,8 +354,10 @@ export const indexingService = {
                 }
             }
 
+            /*
+                this section fetches claimed bounties (last step so no update needed)
+            */
             const claimedEvents = extrinsicEvents.filter(ev => ev.section == EventSection.Bounties && ev.method == EventMethod.BountyClaimed)
-
             if(claimedEvents) {
                 claimedEvents.forEach((ce) => {
                     const claimEventData = JSON.parse(JSON.stringify(ce.data))           
@@ -344,6 +369,9 @@ export const indexingService = {
                 })
             }
 
+            /*
+                this section fetches the votes
+            */
             if(extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.VOTE) {
                 const accountId = (JSON.parse(JSON.stringify(ex.signer)).id).toString()
 
