@@ -4,5 +4,6 @@ export enum ExtrinsicSection {
     BOUNTIES = "bounties",
     TREASURY = "treasury",
     TIMESTAMP = "timestamp",
-    PROXY = "proxy"
+    PROXY = "proxy",
+    MULTISIG = "multisig"
 }

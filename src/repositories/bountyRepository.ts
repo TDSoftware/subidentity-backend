@@ -7,9 +7,9 @@ class BountyRepository extends MySQLRepository<BountyEntity> {
         return "bounty";
     }
 
-    async getByBountyIdAndChainId(bountyId: number, chainId: number): Promise<BountyEntity[]> {
+    async getByBountyIdAndChainId(bountyId: number, chainId: number): Promise<BountyEntity> {
         const query = `SELECT id FROM ${this.tableName} WHERE ${this.tableName}.bounty_id = ${bountyId} AND ${this.tableName}.chain_id = "${chainId}" `;
-        return (await runSelectQuery<BountyEntity>(query));
+        return (await runSelectQuery<BountyEntity>(query))[0];
     }
 }
 

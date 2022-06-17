@@ -7,9 +7,9 @@ class TreasuryProposalRepository extends MySQLRepository<TreasuryProposalEntity>
         return "treasury_proposal";
     }
 
-    async getByProposalIdAndChainId(proposalId: number, chainId: number): Promise<TreasuryProposalEntity[]> {
+    async getByProposalIdAndChainId(proposalId: number, chainId: number): Promise<TreasuryProposalEntity> {
         const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.proposal_id = ${proposalId} AND ${this.tableName}.chain_id = "${chainId}" `;
-        return (await runSelectQuery<TreasuryProposalEntity>(query));
+        return (await runSelectQuery<TreasuryProposalEntity>(query))[0];
     }
 }
 

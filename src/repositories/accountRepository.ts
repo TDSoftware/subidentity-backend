@@ -15,9 +15,16 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
         return (await runSelectQuery<AccountEntity>(query));
     }
 
-    async findByAddress(address: string): Promise<AccountEntity[]> {
-        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.address = "${address}" `;
-        return (await runSelectQuery<AccountEntity>(query));
+    async findByAddressAndChain(address: string, chain: number): Promise<AccountEntity | undefined> {
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.address="${address}" AND ${this.tableName}.chain_id=${chain}`;
+        return (await runSelectQuery<AccountEntity>(query))[0];
+    }
+
+    async insertOrUpdateAccount(chain: number, address: string): Promise<AccountEntity> {
+        const data = [chain, address]
+        const query = `INSERT INTO ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}") ON DUPLICATE KEY UPDATE chain_id = values(chain_id), address = values(address)`
+        const { insertId } = await runInsertQuery(query, data);
+        return await this.getById(insertId);
     }
 
     async insertOrUpdateAccountsOfIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
