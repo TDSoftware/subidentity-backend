@@ -1,6 +1,7 @@
 CREATE TABLE council_motion (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     motion_hash VARCHAR(255),
+    proposal_index INT(11),
     chain_id INT(11) UNSIGNED,
     FOREIGN KEY (chain_id) REFERENCES chain(id),
     method VARCHAR(255),

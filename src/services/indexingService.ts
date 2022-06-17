@@ -81,10 +81,13 @@ export const indexingService = {
             if((extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.CLOSE)) {
 
                 var motionHash = <string>{}
+                var index = <number>{}
                 if(isProxyCall){
-                    motionHash = String(extrinsic.args.proposal_hash)
+                    motionHash = extrinsic.args.proposal_hash
+                    index = extrinsic.args.index
                 } else {
-                    motionHash = String(extrinsic.method.args.proposal_hash)
+                    motionHash = extrinsic.method.args.proposal_hash
+                    index = extrinsic.args.index
                 }
 
                 const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash)
@@ -152,15 +155,17 @@ export const indexingService = {
                 const proposalMethod = proposal.method
                 const proposalSection = proposal.section 
                 const proposeEvent = extrinsicEvents.find(e => e.method == EventMethod.Proposed && e.section == EventSection.Council)
+                const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1]
                 const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2]
                 var councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash)
                 var proposer = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id)
-                var councilMotionEntry = <CouncilMotionEntity>{}
 
                 if(councilMotionEntry) {
+                    console.log(councilMotionEntry)
                     const entry = councilMotionEntry
                     entry.method = proposalMethod
                     entry.section = proposalSection
+                    entry.proposal_index = proposalIndex
                     if(proposer) {
                         entry.proposed_by = proposer.id
                     } else if(!proposer){
@@ -172,13 +177,14 @@ export const indexingService = {
                     }
                     const blockEntry = await blockRepository.getByBlockHash(blockHash)
                     entry.from_block = blockEntry.id
-                    councilMotionRepository.update(entry)
+                    const a = await councilMotionRepository.update(entry)
                 } else if(!councilMotionEntry) {
                     const councilMotion = <CouncilMotionEntity>{}
                     councilMotion.chain_id = chain.id
                     councilMotion.motion_hash = councilMotionHash
                     councilMotion.method = proposalMethod
                     councilMotion.section = proposalSection
+                    councilMotion.proposal_index = proposalIndex
                     councilMotion.status = CouncilMotionStatus.Proposed
                     if(proposer) {
                         councilMotion.proposed_by = proposer.id
