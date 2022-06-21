@@ -84,12 +84,9 @@ export const indexingService = {
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
             let extrinsicMethod = extrinsic.method.method;
             let extrinsicSection = extrinsic.method.section;
-
             let args: any;
 
-            // handles proxy calls, which have the actual call inside them, so we assign these calls as the currently queried extrinsic
             if (extrinsicSection == ExtrinsicSection.PROXY && extrinsicSection == ExtrinsicMethod.PROXY) {
-                // extrinsic here equals ex.method in a normal extrinsic
                 extrinsic = extrinsic.method.args.call;
                 if (extrinsic) {
                     extrinsicMethod = extrinsic.method;
@@ -179,12 +176,10 @@ export const indexingService = {
                 let councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
                 const proposer = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
 
-                //TODO this can be shortened by a lot (ON DUPLICATE KEY UPDATE?)
                 if (councilMotionEntry) {
                     councilMotionEntry.method = proposalMethod;
                     councilMotionEntry.section = proposalSection;
                     councilMotionEntry.proposal_index = proposalIndex;
-                    //TODO this can be either shortened or put into a seperate function as it is used often
                     if (proposer) {
                         councilMotionEntry.proposed_by = proposer.id;
                     } else if (!proposer) {
@@ -225,7 +220,6 @@ export const indexingService = {
                     councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
 
                     if (proposalEntry) {
-                        councilMotionEntry = councilMotionEntry;
                         if (councilMotionEntry) {
                             proposalEntry.council_motion_id = councilMotionEntry.id;
                             await treasureProposalRepository.update(proposalEntry);
@@ -281,7 +275,6 @@ export const indexingService = {
                     }
                     entry.proposed_at = blockEntity.id;
 
-                    //TODO on Duplicate key update? 
                     if (entryList) {
                         bountyRepository.update(entry);
                     } else {
@@ -355,26 +348,26 @@ export const indexingService = {
                 only gets event, as we don't need any data from the extrinsic itself (only really need the status)
             */
             if (
-              (extrinsicSection == ExtrinsicSection.BOUNTIES &&
-                extrinsicMethod == ExtrinsicMethod.CLAIMBOUNTY) ||
-              (extrinsicSection == ExtrinsicSection.MULTISIG &&
-                extrinsicMethod == ExtrinsicMethod.ASMULTI)
+                (extrinsicSection == ExtrinsicSection.BOUNTIES &&
+                    extrinsicMethod == ExtrinsicMethod.CLAIMBOUNTY) ||
+                (extrinsicSection == ExtrinsicSection.MULTISIG &&
+                    extrinsicMethod == ExtrinsicMethod.ASMULTI)
             ) {
-              const claimedEvents = extrinsicEvents.filter(
-                (ev) =>
-                  ev.section == EventSection.Bounties &&
-                  ev.method == EventMethod.BountyClaimed
-              );
-              if (claimedEvents) {
-                claimedEvents.forEach((ce) => {
-                  const claimEventData = JSON.parse(JSON.stringify(ce.data));
-                  const bounty = <BountyEntity>{};
-                  bounty.bounty_id = claimEventData[0];
-                  bounty.status = BountyStatus.Claimed;
-                  bounty.chain_id = chain.id;
-                  bountyRepository.insert(bounty);
-                });
-              }
+                const claimedEvents = extrinsicEvents.filter(
+                    (ev) =>
+                        ev.section == EventSection.Bounties &&
+                        ev.method == EventMethod.BountyClaimed
+                );
+                if (claimedEvents) {
+                    claimedEvents.forEach((ce) => {
+                        const claimEventData = JSON.parse(JSON.stringify(ce.data));
+                        const bounty = <BountyEntity>{};
+                        bounty.bounty_id = claimEventData[0];
+                        bounty.status = BountyStatus.Claimed;
+                        bounty.chain_id = chain.id;
+                        bountyRepository.insert(bounty);
+                    });
+                }
             }
 
             /*
