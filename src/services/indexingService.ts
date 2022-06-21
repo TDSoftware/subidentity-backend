@@ -39,7 +39,6 @@ export const indexingService = {
     },
 
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
-        await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
         await indexingService.parseExtrinsic(block, blockHash);
     },
 
@@ -79,6 +78,7 @@ export const indexingService = {
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
+        const blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
 
         extrinsics.forEach(async (ex, index) => {
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
@@ -111,8 +111,7 @@ export const indexingService = {
                 const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{};
                 councilMotion.motion_hash = motionHash;
                 councilMotion.proposal_index = index;
-                const blockEntry = await blockRepository.getByBlockHash(blockHash);
-                councilMotion.to_block = blockEntry.id;
+                councilMotion.to_block = blockEntity.id
                 councilMotion.chain_id = chain.id;
                 const councilEventMethod = councilEvents.map(ev => ev.method);
 
@@ -197,8 +196,7 @@ export const indexingService = {
                         const newEntry = await accountRepository.insert(account);
                         entry.proposed_by = newEntry.id;
                     }
-                    const blockEntry = await blockRepository.getByBlockHash(blockHash);
-                    entry.from_block = blockEntry.id;
+                    entry.from_block = blockEntity.id
                     await councilMotionRepository.update(entry);
                 } else if (!councilMotionEntry) {
                     const councilMotion = <CouncilMotionEntity>{};
@@ -218,8 +216,7 @@ export const indexingService = {
                         const accountEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
                         councilMotion.proposed_by = accountEntry!.id;
                     }
-                    const blockEntry = await blockRepository.getByBlockHash(blockHash);
-                    councilMotion.from_block = blockEntry.id;
+                    councilMotion.from_block = blockEntity.id
                     councilMotionEntry = await councilMotionRepository.insert(councilMotion);
                 }
 
@@ -284,8 +281,7 @@ export const indexingService = {
                         const accountEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
                         entry.proposed_by = accountEntry!.id;
                     }
-                    const blockId = await blockRepository.getByBlockHash(blockHash);
-                    entry.proposed_at = blockId.id;
+                    entry.proposed_at = blockEntity.id
 
                     //TODO on Duplicate key update? 
                     if (entryList) {
@@ -317,8 +313,7 @@ export const indexingService = {
                             const newEntry = await accountRepository.insert(account);
                             entry.proposed_by = newEntry.id;
                         }
-                        const blockId = await blockRepository.getByBlockHash(blockHash);
-                        entry.proposed_at = blockId.id;
+                        entry.proposed_at = blockEntity.id
                         treasureProposalRepository.update(entry);
                     }
                 });
@@ -386,36 +381,32 @@ export const indexingService = {
                     existingVote = await councilMotionVoteRepository.getByCouncilMotionIdAndAccountId(councilMotionEntry.id, accountId);
                 }
                 if (!existingVote) {
-                    const block = await blockRepository.getByBlockHash(blockHash);
-                    if (block) {
-                        const approved = voteApproved;
-                        const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{};
-                        const voter = await accountRepository.findByAddressAndChain(accountId, chain.id);
-                        if (voter) {
-                            vote.account_id = voter.id;
-                        } else {
-                            const account: AccountEntity = <AccountEntity>{};
-                            account.address = accountId;
-                            account.chain_id = chain.id;
-                            let accountEntry = await accountRepository.insert(account);
-                            vote.account_id = accountEntry.id;
-                        }
-                        vote.approved = approved;
-                        if (councilMotionEntry) {
-                            vote.council_motion_id = councilMotionEntry.id;
-                        } else {
-                            const councilMotionEntry = <CouncilMotionEntity>{};
-                            councilMotionEntry.chain_id = chain.id;
-                            councilMotionEntry.motion_hash = motionHash;
-                            let entry = await councilMotionRepository.insert(councilMotionEntry);
-                            vote.council_motion_id = entry.id;
-                        }
-                        vote.block = block.id;
-                        councilMotionVoteRepository.insert(vote);
+                    const approved = voteApproved;
+                    const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{};
+                    const voter = await accountRepository.findByAddressAndChain(accountId, chain.id);
+                    if (voter) {
+                        vote.account_id = voter.id;
+                    } else {
+                        const account: AccountEntity = <AccountEntity>{};
+                        account.address = accountId;
+                        account.chain_id = chain.id;
+                        let accountEntry = await accountRepository.insert(account);
+                        vote.account_id = accountEntry.id;
                     }
+                    vote.approved = approved;
+                    if (councilMotionEntry) {
+                        vote.council_motion_id = councilMotionEntry.id;
+                    } else {
+                        const councilMotionEntry = <CouncilMotionEntity>{};
+                        councilMotionEntry.chain_id = chain.id;
+                        councilMotionEntry.motion_hash = motionHash;
+                        let entry = await councilMotionRepository.insert(councilMotionEntry);
+                        vote.council_motion_id = entry.id;
+                    }
+                    vote.block = blockEntity.id;
+                    councilMotionVoteRepository.insert(vote);
                 }
             }
-
         });
     }
 };
