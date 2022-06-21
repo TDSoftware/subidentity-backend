@@ -80,7 +80,7 @@ export const indexingService = {
         const blockEvents = await apiAt.query.system.events();
         const blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
 
-        extrinsics.forEach(async (ex, index) => {
+        extrinsics.forEach(async (ex, index: number) => {
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
             let extrinsicMethod = extrinsic.method.method;
             let extrinsicSection = extrinsic.method.section;
@@ -103,15 +103,14 @@ export const indexingService = {
 
             if ((extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.CLOSE)) {
 
-                let motionHash = args.proposal_hash;
-                let index = Number(args.index);
-
+                const motionHash = args.proposal_hash;
+                const index = Number(args.index);
                 const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash);
                 const councilEvents = extrinsicEvents.filter(e => e.section == EventSection.Council);
                 const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{};
                 councilMotion.motion_hash = motionHash;
                 councilMotion.proposal_index = index;
-                councilMotion.to_block = blockEntity.id
+                councilMotion.to_block = blockEntity.id;
                 councilMotion.chain_id = chain.id;
                 const councilEventMethod = councilEvents.map(ev => ev.method);
 
@@ -135,7 +134,7 @@ export const indexingService = {
                     const bountyEvent = JSON.parse(JSON.stringify(be));
                     const bountyId = bountyEvent.data[0];
 
-                    let bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
+                    const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
 
                     if (!bountyEntry) {
                         const bounty: BountyEntity = <BountyEntity>{};
@@ -178,26 +177,25 @@ export const indexingService = {
                 const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1];
                 const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2];
                 let councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
-                let proposer = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
+                const proposer = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
 
                 //TODO this can be shortened by a lot (ON DUPLICATE KEY UPDATE?)
                 if (councilMotionEntry) {
-                    const entry = councilMotionEntry;
-                    entry.method = proposalMethod;
-                    entry.section = proposalSection;
-                    entry.proposal_index = proposalIndex;
+                    councilMotionEntry.method = proposalMethod;
+                    councilMotionEntry.section = proposalSection;
+                    councilMotionEntry.proposal_index = proposalIndex;
                     //TODO this can be either shortened or put into a seperate function as it is used often
                     if (proposer) {
-                        entry.proposed_by = proposer.id;
+                        councilMotionEntry.proposed_by = proposer.id;
                     } else if (!proposer) {
                         const account: AccountEntity = <AccountEntity>{};
                         account.address = extrinsic.signer.Id;
                         account.chain_id = chain.id;
                         const newEntry = await accountRepository.insert(account);
-                        entry.proposed_by = newEntry.id;
+                        councilMotionEntry.proposed_by = newEntry.id;
                     }
-                    entry.from_block = blockEntity.id
-                    await councilMotionRepository.update(entry);
+                    councilMotionEntry.from_block = blockEntity.id;
+                    await councilMotionRepository.update(councilMotionEntry);
                 } else if (!councilMotionEntry) {
                     const councilMotion = <CouncilMotionEntity>{};
                     councilMotion.chain_id = chain.id;
@@ -216,7 +214,7 @@ export const indexingService = {
                         const accountEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
                         councilMotion.proposed_by = accountEntry!.id;
                     }
-                    councilMotion.from_block = blockEntity.id
+                    councilMotion.from_block = blockEntity.id;
                     councilMotionEntry = await councilMotionRepository.insert(councilMotion);
                 }
 
@@ -281,7 +279,7 @@ export const indexingService = {
                         const accountEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
                         entry.proposed_by = accountEntry!.id;
                     }
-                    entry.proposed_at = blockEntity.id
+                    entry.proposed_at = blockEntity.id;
 
                     //TODO on Duplicate key update? 
                     if (entryList) {
@@ -313,7 +311,7 @@ export const indexingService = {
                             const newEntry = await accountRepository.insert(account);
                             entry.proposed_by = newEntry.id;
                         }
-                        entry.proposed_at = blockEntity.id
+                        entry.proposed_at = blockEntity.id;
                         treasureProposalRepository.update(entry);
                     }
                 });
@@ -342,7 +340,7 @@ export const indexingService = {
                                 const account: AccountEntity = <AccountEntity>{};
                                 account.address = treasuryEvent.data[2];
                                 account.chain_id = chain.id;
-                                let accountEntry = await accountRepository.insert(account);
+                                const accountEntry = await accountRepository.insert(account);
                                 treasuryProposal.beneficiary = accountEntry.id;
                             }
                             treasuryProposal.chain_id = chain.id;
@@ -373,8 +371,8 @@ export const indexingService = {
             */
             if (extrinsicSection == ExtrinsicSection.COUNCIL && extrinsicMethod == ExtrinsicMethod.VOTE) {
                 const accountId = (JSON.parse(JSON.stringify(ex.signer)).id).toString();
-                let motionHash = args.proposal;
-                let voteApproved = args.approve;
+                const motionHash = args.proposal;
+                const voteApproved = args.approve;
                 const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash);
                 let existingVote = <any>{};
                 if (councilMotionEntry) {
@@ -390,7 +388,7 @@ export const indexingService = {
                         const account: AccountEntity = <AccountEntity>{};
                         account.address = accountId;
                         account.chain_id = chain.id;
-                        let accountEntry = await accountRepository.insert(account);
+                        const accountEntry = await accountRepository.insert(account);
                         vote.account_id = accountEntry.id;
                     }
                     vote.approved = approved;
@@ -400,7 +398,7 @@ export const indexingService = {
                         const councilMotionEntry = <CouncilMotionEntity>{};
                         councilMotionEntry.chain_id = chain.id;
                         councilMotionEntry.motion_hash = motionHash;
-                        let entry = await councilMotionRepository.insert(councilMotionEntry);
+                        const entry = await councilMotionRepository.insert(councilMotionEntry);
                         vote.council_motion_id = entry.id;
                     }
                     vote.block = blockEntity.id;
