@@ -9,5 +9,6 @@ export enum ExtrinsicMethod {
     PROPOSESPEND = "proposeSpend",
     PROXY = "proxy",
     APPROVEPROPOSAL = "approveProposal",
-    ASMULTI = "asMulti"
+    ASMULTI = "asMulti",
+    CLAIMBOUNTY = "claimBounty"
 }

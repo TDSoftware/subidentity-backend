@@ -354,16 +354,27 @@ export const indexingService = {
                 this section fetches claimed bounties (last step so no update needed)
                 only gets event, as we don't need any data from the extrinsic itself (only really need the status)
             */
-            const claimedEvents = extrinsicEvents.filter(ev => ev.section == EventSection.Bounties && ev.method == EventMethod.BountyClaimed);
-            if (claimedEvents) {
+            if (
+              (extrinsicSection == ExtrinsicSection.BOUNTIES &&
+                extrinsicMethod == ExtrinsicMethod.CLAIMBOUNTY) ||
+              (extrinsicSection == ExtrinsicSection.MULTISIG &&
+                extrinsicMethod == ExtrinsicMethod.ASMULTI)
+            ) {
+              const claimedEvents = extrinsicEvents.filter(
+                (ev) =>
+                  ev.section == EventSection.Bounties &&
+                  ev.method == EventMethod.BountyClaimed
+              );
+              if (claimedEvents) {
                 claimedEvents.forEach((ce) => {
-                    const claimEventData = JSON.parse(JSON.stringify(ce.data));
-                    const bounty = <BountyEntity>{};
-                    bounty.bounty_id = claimEventData[0];
-                    bounty.status = BountyStatus.Claimed;
-                    bounty.chain_id = chain.id;
-                    bountyRepository.insert(bounty);
+                  const claimEventData = JSON.parse(JSON.stringify(ce.data));
+                  const bounty = <BountyEntity>{};
+                  bounty.bounty_id = claimEventData[0];
+                  bounty.status = BountyStatus.Claimed;
+                  bounty.chain_id = chain.id;
+                  bountyRepository.insert(bounty);
                 });
+              }
             }
 
             /*
