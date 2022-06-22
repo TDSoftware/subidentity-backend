@@ -22,7 +22,7 @@ import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
 import { EventSection } from "../types/enums/EventSection";
 import { EventMethod } from "../types/enums/EventMethod";
 import { BlockEntity } from "../types/entities/BlockEntity";
-import { GenericExtrinsic, Vec } from "@polkadot/types";
+import { Vec } from "@polkadot/types";
 import { FrameSystemEventRecord } from "@polkadot/types/lookup";
 import { AnyJson } from "@polkadot/types-codec/types";
 
@@ -75,8 +75,8 @@ export const indexingService = {
                 if (extrinsic) {
                     extrinsicMethod = extrinsic.method;
                     extrinsicSection = extrinsic.section;
+                    args = extrinsic.args;
                 }
-                args = extrinsic.args;
             } else args = extrinsic.method.args;
 
             switch (extrinsicSection) {
