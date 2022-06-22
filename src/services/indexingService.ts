@@ -67,7 +67,10 @@ export const indexingService = {
             let extrinsicSection = extrinsic.method.section;
             let args: any;
 
-            if (extrinsicSection == ExtrinsicSection.PROXY && extrinsicSection == ExtrinsicMethod.PROXY) {
+            const extrinsicEvents = blockEvents.filter((e: FrameSystemEventRecord) => e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization" && e.phase.asApplyExtrinsic.toNumber() == index).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
+            if (extrinsicEvents.some((ev: Record<string, AnyJson>) => ev.section == EventSection.System && ev.method == EventMethod.ExtrinsicFailed)) return;
+
+            if (extrinsicSection == ExtrinsicSection.PROXY && extrinsicMethod == ExtrinsicMethod.PROXY) {
                 extrinsic = extrinsic.method.args.call;
                 if (extrinsic) {
                     extrinsicMethod = extrinsic.method;
@@ -75,8 +78,6 @@ export const indexingService = {
                 }
                 args = extrinsic.args;
             } else args = extrinsic.method.args;
-
-            const extrinsicEvents = blockEvents.filter( (e: FrameSystemEventRecord) => e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization" && e.phase.asApplyExtrinsic.toNumber() == index).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
 
             switch (extrinsicSection) {
                 case (ExtrinsicSection.COUNCIL):
@@ -135,12 +136,10 @@ export const indexingService = {
         bountyEvents.forEach(async (be: Record<string, AnyJson>) => {
             const bountyEvent = JSON.parse(JSON.stringify(be));
             const bountyId = bountyEvent.data[0];
-
             const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
-
+            
             if (!bountyEntry) {
                 const bounty: BountyEntity = <BountyEntity>{};
-
                 switch (be.method) {
                     case "BountyRejected": {
                         bounty.status = BountyStatus.Rejected;
@@ -159,13 +158,11 @@ export const indexingService = {
                         break;
                     }
                 }
-
                 bounty.chain_id = chain.id;
                 bounty.bounty_id = bountyId;
                 bountyRepository.insert(bounty);
             }
         });
-
     },
 
     async parseCouncilPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, extrinsic: any, blockEntity: BlockEntity): Promise<void> {
