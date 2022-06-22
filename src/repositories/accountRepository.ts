@@ -21,8 +21,8 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
     }
 
     async insertOrUpdateAccount(chain: number, address: string): Promise<AccountEntity> {
-        const data = [chain, address]
-        const query = `INSERT INTO ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}") ON DUPLICATE KEY UPDATE chain_id = values(chain_id), address = values(address)`
+        const data = [chain, address];
+        const query = `INSERT INTO ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}") ON DUPLICATE KEY UPDATE chain_id = values(chain_id), address = values(address)`;
         const { insertId } = await runInsertQuery(query, data);
         return await this.getById(insertId);
     }

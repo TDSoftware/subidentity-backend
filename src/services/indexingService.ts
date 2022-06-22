@@ -76,7 +76,7 @@ export const indexingService = {
                 args = extrinsic.args;
             } else args = extrinsic.method.args;
 
-            const extrinsicEvents = blockEvents.filter(e=> e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization" && e.phase.asApplyExtrinsic.toNumber() == index).map(ev => ev.event.toHuman());
+            const extrinsicEvents = blockEvents.filter( (e: FrameSystemEventRecord) => e.phase.toString() != "Initialization" && e.phase.toString() != "Finalization" && e.phase.asApplyExtrinsic.toNumber() == index).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
 
             switch (extrinsicSection) {
                 case (ExtrinsicSection.COUNCIL):
@@ -108,19 +108,19 @@ export const indexingService = {
         const motionHash = args.proposal_hash;
         const index = Number(args.index);
         const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash);
-        const councilEvents = extrinsicEvents.filter(e => e.section == EventSection.Council);
+        const councilEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Council);
         const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{};
         councilMotion.motion_hash = motionHash;
         councilMotion.proposal_index = index;
         councilMotion.to_block = blockEntity.id;
         councilMotion.chain_id = chain.id;
-        const councilEventMethod = councilEvents.map(ev => ev.method);
+        const councilEventMethod = councilEvents.map((ev: Record<string, AnyJson>) => ev.method);
 
-        if (councilEventMethod.some(ev => ev == "Approved")) {
+        if (councilEventMethod.some((ev: AnyJson) => ev == "Approved")) {
             councilMotion.status = CouncilMotionStatus.Approved;
-        } else if (councilEventMethod.some(ev => ev == "Rejected")) {
+        } else if (councilEventMethod.some((ev: AnyJson) => ev == "Rejected")) {
             councilMotion.status = CouncilMotionStatus.Rejected;
-        } else if (councilEventMethod.some(ev => ev == "Disapproved")) {
+        } else if (councilEventMethod.some((ev: AnyJson) => ev == "Disapproved")) {
             councilMotion.status = CouncilMotionStatus.Disapproved;
         }
 
@@ -130,9 +130,9 @@ export const indexingService = {
             councilMotionRepository.update(councilMotion);
         }
 
-        const bountyEvents = extrinsicEvents.filter(e => e.section == EventSection.Bounties);
+        const bountyEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Bounties);
 
-        bountyEvents.forEach(async (be) => {
+        bountyEvents.forEach(async (be: Record<string, AnyJson>) => {
             const bountyEvent = JSON.parse(JSON.stringify(be));
             const bountyId = bountyEvent.data[0];
 
@@ -172,7 +172,7 @@ export const indexingService = {
         const proposal = args.proposal;
         const proposalMethod = proposal.method;
         const proposalSection = proposal.section;
-        const proposeEvent = extrinsicEvents.find(e => e.method == EventMethod.Proposed && e.section == EventSection.Council);
+        const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method == EventMethod.Proposed && e.section == EventSection.Council);
         const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1];
         const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2];
         let councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
@@ -228,7 +228,7 @@ export const indexingService = {
             } else if (!proposalEntry) {
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
                 treasuryProposal.proposal_id = proposalID;
-                if (extrinsicEvents.find(e => e.method == EventMethod.Awarded && e.section == EventSection.Treasury)) {
+                if (extrinsicEvents.find((e: Record<string, AnyJson>) => e.method == EventMethod.Awarded && e.section == EventSection.Treasury)) {
                     treasuryProposal.status = TreasuryProposalStatus.Awarded;
                 } else {
                     treasuryProposal.status = TreasuryProposalStatus.Proposed;
@@ -243,8 +243,8 @@ export const indexingService = {
     },
 
     async parseProposeBounty(extrinsicEvents: Record<string, AnyJson>[], args: any, ex: any, extrinsic: any, blockEntity: BlockEntity): Promise<void> {
-        const bountiesProposedEvents = extrinsicEvents.filter(e => e.section == EventSection.Bounties && e.method == EventMethod.BountyProposed);
-        bountiesProposedEvents.forEach(async (bpe) => {
+        const bountiesProposedEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Bounties && e.method == EventMethod.BountyProposed);
+        bountiesProposedEvents.forEach(async (bpe: Record<string, AnyJson>) => {
             const bountyId = JSON.parse(JSON.stringify(bpe.data))[0];
             const entryList = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
             let entry: BountyEntity = <BountyEntity>{};
@@ -281,8 +281,8 @@ export const indexingService = {
     },
 
     async parseTreasuryProposeSpend(extrinsicEvents: Record<string, AnyJson>[], ex: any, blockEntity: BlockEntity): Promise<void> {
-        const treasuryProposedEvents = extrinsicEvents.filter(e => e.section == EventSection.Treasury && e.method == EventMethod.Proposed);
-        treasuryProposedEvents.forEach(async (tpe) => {
+        const treasuryProposedEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Treasury && e.method == EventMethod.Proposed);
+        treasuryProposedEvents.forEach(async (tpe: Record<string, AnyJson>) => {
             const proposalId = JSON.parse(JSON.stringify(tpe.data))[0];
             const entryList = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             if (entryList) {
@@ -305,11 +305,11 @@ export const indexingService = {
     },
 
     async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>): Promise<void> {
-        const initializationEvents = blockEvents.filter(e => e.phase.toString() == "Initialization").map(ev => ev.event.toHuman());
-        const treasuryEvents = initializationEvents.filter(e => e.section == EventSection.Treasury && e.method == EventMethod.Awarded);
+        const initializationEvents = blockEvents.filter((e: any) => e.phase.toString() == "Initialization").map((ev: FrameSystemEventRecord) => ev.event.toHuman());
+        const treasuryEvents = initializationEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Treasury && e.method == EventMethod.Awarded);
 
         if (treasuryEvents) {
-            treasuryEvents.forEach(async (te) => {
+            treasuryEvents.forEach(async (te: Record<string, AnyJson>) => {
                 const treasuryEvent = JSON.parse(JSON.stringify(te));
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
                 const existingProposal = await treasureProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id);
@@ -336,12 +336,12 @@ export const indexingService = {
 
     async parseClaimBounty(extrinsicEvents: Record<string, AnyJson>[]): Promise<void> {
         const claimedEvents = extrinsicEvents.filter(
-            (ev) =>
+            (ev: Record<string, AnyJson>) =>
                 ev.section == EventSection.Bounties &&
                 ev.method == EventMethod.BountyClaimed
         );
         if (claimedEvents) {
-            claimedEvents.forEach((ce) => {
+            claimedEvents.forEach((ce: Record<string, AnyJson>) => {
                 const claimEventData = JSON.parse(JSON.stringify(ce.data));
                 const bounty = <BountyEntity>{};
                 bounty.bounty_id = claimEventData[0];

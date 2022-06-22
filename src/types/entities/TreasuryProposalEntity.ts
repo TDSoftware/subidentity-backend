@@ -1,5 +1,3 @@
-import internal from "stream";
-
 export interface TreasuryProposalEntity {
     id: number;
     council_motion_id: number,
