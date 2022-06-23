@@ -3,5 +3,6 @@ export enum EventMethod {
     Awarded = "Awarded",
     BountyProposed = "BountyProposed",
     BountyClaimed = "BountyClaimed",
-    ExtrinsicFailed = "ExtrinsicFailed"
+    ExtrinsicFailed = "ExtrinsicFailed",
+    NewTerm = "NewTerm"
 }

@@ -2,5 +2,6 @@ export enum EventSection {
     Bounties = "bounties",
     Council = "council",
     Treasury = "treasury",
-    System = "system"
+    System = "system",
+    PhragmenElection = "phragmenElection"
 }

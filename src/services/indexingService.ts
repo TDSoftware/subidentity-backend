@@ -309,7 +309,7 @@ export const indexingService = {
     async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity): Promise<void> {
         const initializationEvents = blockEvents.filter((e: any) => e.phase.toString() == "Initialization").map((ev: FrameSystemEventRecord) => ev.event.toHuman());
         const treasuryEvents = initializationEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Treasury && e.method == EventMethod.Awarded);
-        const newCounciltermEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section == "phragmenElection" && e.method == "NewTerm");
+        const newCounciltermEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section == EventSection.PhragmenElection && e.method == EventMethod.NewTerm);
 
         if(newCounciltermEvent) {
             //TODO implement to_block -> every 14400 blocks a new term starts
