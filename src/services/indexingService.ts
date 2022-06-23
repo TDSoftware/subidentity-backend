@@ -26,7 +26,6 @@ import { CounciltermEntity } from "../types/entities/CounciltermEntity";
 import { Vec } from "@polkadot/types";
 import { FrameSystemEventRecord } from "@polkadot/types/lookup";
 import { AnyJson } from "@polkadot/types-codec/types";
-import { databaseReady } from '../lib/mysqlDatabase';
 import { counciltermRepository } from "../repositories/counciltermRepository";
 import { CouncilorEntity } from "../types/entities/CouncilorEntity";
 import { councilorRepository } from "../repositories/councilorRepository";
@@ -317,21 +316,21 @@ export const indexingService = {
             councilterm.from_block = blockEntity.id;
             const counciltermInsert = await counciltermRepository.insert(councilterm);
             const counciltermData = Array(newCounciltermEvent.data).flat().flat();
-            counciltermData.forEach(async (ctd, index) => {
+            counciltermData.forEach(async (ctd: AnyJson) => {
                 const councilorEntity = <CouncilorEntity>{};
                 const address = String(Array(ctd).flat()[0]);
-                councilorEntity.councilterm_id = counciltermInsert.id
-                const account = await accountRepository.findByAddressAndChain(address, chain.id)
+                councilorEntity.councilterm_id = counciltermInsert.id;
+                const account = await accountRepository.findByAddressAndChain(address, chain.id);
                 if(account) councilorEntity.account_id = account.id;
                 else {
                     const newAccount = <AccountEntity>{};
                     newAccount.chain_id = chain.id;
                     newAccount.address = address;
-                    const accountEntry = await accountRepository.insert(newAccount)
-                    councilorEntity.account_id = accountEntry.id
+                    const accountEntry = await accountRepository.insert(newAccount);
+                    councilorEntity.account_id = accountEntry.id;
                 }
-                await councilorRepository.insert(councilorEntity)
-            }) 
+                await councilorRepository.insert(councilorEntity);
+            }); 
         }
 
         if (treasuryEvents) {
