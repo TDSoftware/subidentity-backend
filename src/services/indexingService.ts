@@ -22,9 +22,14 @@ import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
 import { EventSection } from "../types/enums/EventSection";
 import { EventMethod } from "../types/enums/EventMethod";
 import { BlockEntity } from "../types/entities/BlockEntity";
+import { CounciltermEntity } from "../types/entities/CounciltermEntity";
 import { Vec } from "@polkadot/types";
 import { FrameSystemEventRecord } from "@polkadot/types/lookup";
 import { AnyJson } from "@polkadot/types-codec/types";
+import { databaseReady } from '../lib/mysqlDatabase';
+import { counciltermRepository } from "../repositories/counciltermRepository";
+import { CouncilorEntity } from "../types/entities/CouncilorEntity";
+import { councilorRepository } from "../repositories/councilorRepository";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -93,7 +98,7 @@ export const indexingService = {
                     if (extrinsicMethod == ExtrinsicMethod.PROPOSESPEND) this.parseTreasuryProposeSpend(extrinsicEvents, ex, blockEntity);
                     break;
                 case (ExtrinsicSection.TIMESTAMP):
-                    if (extrinsicMethod == ExtrinsicMethod.SET) this.parseTimestampSet(blockEvents);
+                    if (extrinsicMethod == ExtrinsicMethod.SET) this.parseTimestampSet(blockEvents, blockEntity);
                     break;
                 case (ExtrinsicSection.MULTISIG):
                     if (extrinsicMethod == ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
@@ -301,9 +306,33 @@ export const indexingService = {
         });
     },
 
-    async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>): Promise<void> {
+    async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity): Promise<void> {
         const initializationEvents = blockEvents.filter((e: any) => e.phase.toString() == "Initialization").map((ev: FrameSystemEventRecord) => ev.event.toHuman());
         const treasuryEvents = initializationEvents.filter((e: Record<string, AnyJson>) => e.section == EventSection.Treasury && e.method == EventMethod.Awarded);
+        const newCounciltermEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section == "phragmenElection" && e.method == "NewTerm");
+
+        if(newCounciltermEvent) {
+            //TODO implement to_block -> every 14400 blocks a new term starts
+            const councilterm = <CounciltermEntity>{};
+            councilterm.from_block = blockEntity.id;
+            const counciltermInsert = await counciltermRepository.insert(councilterm);
+            const counciltermData = Array(newCounciltermEvent.data).flat().flat();
+            counciltermData.forEach(async (ctd, index) => {
+                const councilorEntity = <CouncilorEntity>{};
+                const address = String(Array(ctd).flat()[0]);
+                councilorEntity.councilterm_id = counciltermInsert.id
+                const account = await accountRepository.findByAddressAndChain(address, chain.id)
+                if(account) councilorEntity.account_id = account.id;
+                else {
+                    const newAccount = <AccountEntity>{};
+                    newAccount.chain_id = chain.id;
+                    newAccount.address = address;
+                    const accountEntry = await accountRepository.insert(newAccount)
+                    councilorEntity.account_id = accountEntry.id
+                }
+                await councilorRepository.insert(councilorEntity)
+            }) 
+        }
 
         if (treasuryEvents) {
             treasuryEvents.forEach(async (te: Record<string, AnyJson>) => {
