@@ -3,5 +3,6 @@ export enum EventSection {
     Council = "council",
     Treasury = "treasury",
     System = "system",
-    PhragmenElection = "phragmenElection"
+    PhragmenElection = "phragmenElection",
+    Tips = "tips"
 }

@@ -27,6 +27,13 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
         return await this.getById(insertId);
     }
 
+    async insertIgnoreAccount(address: string, chain: number): Promise<AccountEntity> {
+        const data = [chain, address]
+        const query = `INSERT IGNORE into ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}")`
+        const { insertId } = await runInsertQuery(query, data);
+        return await this.getById(insertId);
+    }
+
     async insertOrUpdateAccountsOfIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
         const data = [identities.map((identity: Identity) => [identity.basicInfo.address, chainId])];
         const query = `INSERT IGNORE ${accountRepository.tableName}(

@@ -4,5 +4,8 @@ export enum EventMethod {
     BountyProposed = "BountyProposed",
     BountyClaimed = "BountyClaimed",
     ExtrinsicFailed = "ExtrinsicFailed",
-    NewTerm = "NewTerm"
+    NewTerm = "NewTerm",
+    TipRetracted = "TipRetracted",
+    NewTip = "NewTip",
+    TipClosed = "TipClosed"
 }
