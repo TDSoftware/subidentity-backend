@@ -110,7 +110,7 @@ export const indexingService = {
                     if (extrinsicMethod == ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
                     break;
                 case (ExtrinsicSection.TIPS):
-                    this.parseTreasuryTip(extrinsicEvents, extrinsicMethod, ex, args, blockEntity)
+                    this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, ex, args, blockEntity)
                 default: break;
             }
         });
@@ -237,15 +237,19 @@ export const indexingService = {
             } else if (!proposalEntry) {
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
                 treasuryProposal.proposal_id = proposalID;
+
                 if (extrinsicEvents.find((e: Record<string, AnyJson>) => e.method == EventMethod.Awarded && e.section == EventSection.Treasury)) {
                     treasuryProposal.status = TreasuryProposalStatus.Awarded;
                 } else {
                     treasuryProposal.status = TreasuryProposalStatus.Proposed;
                 }
+
                 treasuryProposal.chain_id = chain.id;
+
                 if (councilMotionEntry) {
                     treasuryProposal.council_motion_id = councilMotionEntry.id;
                 }
+
                 treasureProposalRepository.insert(treasuryProposal);
             }
         }
@@ -422,7 +426,8 @@ export const indexingService = {
     },
 
     //TODO utility batch handling
-    async parseTreasuryTip(extrinsicEvents: Record<string, AnyJson>[], extrinsicMethod: any, extrinsic: any, args: any, blockEntity: BlockEntity): Promise<void> {
+    // work in progress, a few cases are not covered yet
+    async parseTipExtrinsics(extrinsicEvents: Record<string, AnyJson>[], extrinsicMethod: any, extrinsic: any, args: any, blockEntity: BlockEntity): Promise<void> {
         switch (extrinsicMethod) {
             case ExtrinsicMethod.REPORTAWESOME: {
                 const tipEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method == EventMethod.NewTip);
@@ -431,7 +436,7 @@ export const indexingService = {
                     const tipProposalEntry = await tipProposalRepository.getByMotionHash(motionHash);
                     var beneficiaryEntry = await accountRepository.findByAddressAndChain(args.who, chain.id)
                     var finderEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id)
-                    
+
                     if (!beneficiaryEntry) {
                         const beneficiary = <AccountEntity>{};
                         beneficiary.address = args.who
