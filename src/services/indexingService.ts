@@ -1,4 +1,4 @@
-import { TipProposalStatus } from './../types/enums/TipProposalStatus';
+import { TipProposalStatus } from "./../types/enums/TipProposalStatus";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { SignedBlock } from "@polkadot/types/interfaces";
 import { blockRepository } from "../repositories/blockRepository";
@@ -7,7 +7,7 @@ import { CouncilMotionEntity } from "../types/entities/CouncilMotionEntity";
 import { blockMapper } from "./mapper/blockMapper";
 import { chainService } from "./chainService";
 import { BountyEntity } from "../types/entities/BountyEntity";
-import { ExtrinsicMethod } from '../types/enums/ExtrinsicMethod';
+import { ExtrinsicMethod } from "../types/enums/ExtrinsicMethod";
 import { ExtrinsicSection } from "../types/enums/ExtrinsicSection";
 import { bountyRepository } from "../repositories/bountyRepository";
 import { councilMotionRepository } from "../repositories/councilMotionRepository";
@@ -22,7 +22,7 @@ import { BountyStatus } from "../types/enums/BountyStatus";
 import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
 import { EventSection } from "../types/enums/EventSection";
 import { EventMethod } from "../types/enums/EventMethod";
-import { BlockEntity } from '../types/entities/BlockEntity';
+import { BlockEntity } from "../types/entities/BlockEntity";
 import { CounciltermEntity } from "../types/entities/CounciltermEntity";
 import { Vec } from "@polkadot/types";
 import { FrameSystemEventRecord } from "@polkadot/types/lookup";
@@ -31,8 +31,7 @@ import { counciltermRepository } from "../repositories/counciltermRepository";
 import { CouncilorEntity } from "../types/entities/CouncilorEntity";
 import { councilorRepository } from "../repositories/councilorRepository";
 import { TipProposalEntity } from "../types/entities/TipProposalEntity";
-import { timingSafeEqual } from "crypto";
-import { tipProposalRepository } from '../repositories/tipProposalRepository';
+import { tipProposalRepository } from "../repositories/tipProposalRepository";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -67,7 +66,7 @@ export const indexingService = {
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
-        var blockEntity = <BlockEntity>{}
+        let blockEntity = <BlockEntity>{};
 
         if (await blockRepository.getByBlockHash(blockHash)) return;
         else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
@@ -110,8 +109,8 @@ export const indexingService = {
                     if (extrinsicMethod == ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
                     break;
                 case (ExtrinsicSection.TIPS):
-                    this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, ex, args, blockEntity)
-                default: break;
+                    this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, ex, args, blockEntity);
+                    break;
             }
         });
     },
@@ -433,52 +432,52 @@ export const indexingService = {
                 if (tipEvent) {
                     const motionHash = JSON.parse(JSON.stringify(tipEvent!.data))[0];
                     const tipProposalEntry = await tipProposalRepository.getByMotionHash(motionHash);
-                    var beneficiaryEntry = await accountRepository.findByAddressAndChain(args.who, chain.id)
-                    var finderEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id)
+                    let beneficiaryEntry = await accountRepository.findByAddressAndChain(args.who, chain.id);
+                    let finderEntry = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
 
                     if (!beneficiaryEntry) {
                         const beneficiary = <AccountEntity>{};
-                        beneficiary.address = args.who
-                        beneficiary.chain_id = chain.id
-                        beneficiaryEntry = await accountRepository.insert(beneficiary)
+                        beneficiary.address = args.who;
+                        beneficiary.chain_id = chain.id;
+                        beneficiaryEntry = await accountRepository.insert(beneficiary);
                     }
                     if (!finderEntry) {
                         const finder = <AccountEntity>{};
-                        finder.address = extrinsic.signer.Id
-                        finder.chain_id = chain.id
-                        finderEntry = await accountRepository.insert(finder)
+                        finder.address = extrinsic.signer.Id;
+                        finder.chain_id = chain.id;
+                        finderEntry = await accountRepository.insert(finder);
                     }
                     if (tipProposalEntry) {
-                        tipProposalEntry.reason = args.reason
-                        tipProposalEntry.chain_id = chain.id
-                        tipProposalEntry.proposed_at = blockEntity.id
-                        tipProposalEntry.motion_hash = motionHash
-                        tipProposalEntry.beneficiary = beneficiaryEntry.id
-                        tipProposalEntry.finder = finderEntry.id
-                        await tipProposalRepository.update(tipProposalEntry)
+                        tipProposalEntry.reason = args.reason;
+                        tipProposalEntry.chain_id = chain.id;
+                        tipProposalEntry.proposed_at = blockEntity.id;
+                        tipProposalEntry.motion_hash = motionHash;
+                        tipProposalEntry.beneficiary = beneficiaryEntry.id;
+                        tipProposalEntry.finder = finderEntry.id;
+                        await tipProposalRepository.update(tipProposalEntry);
                     } else if (!tipProposalEntry) {
-                        const tipProposal = <TipProposalEntity>{}
-                        tipProposal.reason = args.reason
-                        tipProposal.chain_id = chain.id
-                        tipProposal.proposed_at = blockEntity.id
-                        tipProposal.status = TipProposalStatus.Proposed
-                        tipProposal.motion_hash = motionHash
-                        tipProposal.beneficiary = beneficiaryEntry.id
-                        tipProposal.finder = finderEntry.id
-                        await tipProposalRepository.insert(tipProposal)
+                        const tipProposal = <TipProposalEntity>{};
+                        tipProposal.reason = args.reason;
+                        tipProposal.chain_id = chain.id;
+                        tipProposal.proposed_at = blockEntity.id;
+                        tipProposal.status = TipProposalStatus.Proposed;
+                        tipProposal.motion_hash = motionHash;
+                        tipProposal.beneficiary = beneficiaryEntry.id;
+                        tipProposal.finder = finderEntry.id;
+                        await tipProposalRepository.insert(tipProposal);
                     }
                 }
                 break;
             }
             case ExtrinsicMethod.RETRACTTIP: {
-                const motionHash = args.hash
+                const motionHash = args.hash;
                 const tipProposalEntry = await tipProposalRepository.getByMotionHash(motionHash);
                 if (!tipProposalEntry) {
                     const tipProposal = <TipProposalEntity>{};
-                    tipProposal.motion_hash = motionHash
-                    tipProposal.status = TipProposalStatus.Retracted
-                    tipProposal.chain_id = chain.id
-                    await tipProposalRepository.insert(tipProposal)
+                    tipProposal.motion_hash = motionHash;
+                    tipProposal.status = TipProposalStatus.Retracted;
+                    tipProposal.chain_id = chain.id;
+                    await tipProposalRepository.insert(tipProposal);
                 }
                 break;
             }
@@ -491,19 +490,19 @@ export const indexingService = {
                     tipProposal.motion_hash = motionHash;
                     tipProposal.status = TipProposalStatus.Closed;
                     tipProposal.value = JSON.parse(JSON.stringify(tipEvent!.data))[2];
-                    tipProposal.chain_id = chain.id
+                    tipProposal.chain_id = chain.id;
                     tipProposalRepository.insert(tipProposal);
-                } else if(tipProposalEntry) {
+                } else if (tipProposalEntry) {
                     tipProposalEntry.status = TipProposalStatus.Closed;
                     tipProposalEntry.value = JSON.parse(JSON.stringify(tipEvent!.data))[2];
-                    tipProposalEntry.chain_id = chain.id
+                    tipProposalEntry.chain_id = chain.id;
                     await tipProposalRepository.update(tipProposalEntry);
                 }
                 break;
             }
             case ExtrinsicMethod.TIP: {
                 // 3 different cases: utility batch, proxy and tip
-                console.log(extrinsic.toHuman())
+                console.log(extrinsic.toHuman());
                 break;
             }
         }
