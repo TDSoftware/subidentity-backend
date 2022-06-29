@@ -9,5 +9,7 @@ CREATE table proposal (
     section VARCHAR(255),
     method VARCHAR(255),
     status VARCHAR(255),
+    chain_id INT(11) UNSIGNED,
+    FOREIGN KEY (chain_id) REFERENCES chain(id),
     type VARCHAR(255)
 )
