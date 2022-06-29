@@ -14,5 +14,7 @@ export enum ExtrinsicMethod {
     RETRACTTIP = "retractTip",
     REPORTAWESOME = "reportAwesome",
     CLOSETIP = "closeTip",
-    TIP = "tip"
+    TIP = "tip",
+    BATCHALL = "batchAll",
+    BATCH = "batch"
 }

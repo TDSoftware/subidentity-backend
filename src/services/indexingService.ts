@@ -116,7 +116,6 @@ export const indexingService = {
         });
     },
 
-
     async parseCouncilClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         const motionHash = args.proposal_hash;
         const index = Number(args.index);
@@ -484,7 +483,6 @@ export const indexingService = {
                 break;
             }
             case ExtrinsicMethod.CLOSETIP: {
-                // does querying for multiple events here even make sense?
                 const tipEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method == EventMethod.TipClosed);
                 const motionHash = JSON.parse(JSON.stringify(tipEvent!.data))[0];
                 const tipProposalEntry = await tipProposalRepository.getByMotionHash(motionHash);
@@ -495,10 +493,16 @@ export const indexingService = {
                     tipProposal.value = JSON.parse(JSON.stringify(tipEvent!.data))[2];
                     tipProposal.chain_id = chain.id
                     tipProposalRepository.insert(tipProposal);
+                } else if(tipProposalEntry) {
+                    tipProposalEntry.status = TipProposalStatus.Closed;
+                    tipProposalEntry.value = JSON.parse(JSON.stringify(tipEvent!.data))[2];
+                    tipProposalEntry.chain_id = chain.id
+                    await tipProposalRepository.update(tipProposalEntry);
                 }
                 break;
             }
             case ExtrinsicMethod.TIP: {
+                // 3 different cases: utility batch, proxy and tip
                 console.log(extrinsic.toHuman())
                 break;
             }

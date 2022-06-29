@@ -6,5 +6,6 @@ export enum ExtrinsicSection {
     TIMESTAMP = "timestamp",
     PROXY = "proxy",
     MULTISIG = "multisig",
-    TIPS = "tips"
+    TIPS = "tips",
+    UTILITY = "utility"
 }
