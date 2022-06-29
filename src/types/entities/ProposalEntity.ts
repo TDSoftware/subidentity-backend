@@ -1,4 +1,4 @@
-export interface DemocracyProposalEntity {
+export interface ProposalEntity {
     id: number;
     proposal_index: number;
     chain_id: number;
