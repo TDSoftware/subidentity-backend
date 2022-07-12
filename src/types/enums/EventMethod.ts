@@ -7,5 +7,8 @@ export enum EventMethod {
     NewTerm = "NewTerm",
     TipRetracted = "TipRetracted",
     NewTip = "NewTip",
-    TipClosed = "TipClosed"
+    TipClosed = "TipClosed",
+    Tabled = "Tabled",
+    DemocracyProposed = "DemocracyProposed",
+    PreimageNoted = "PreimageNoted"
 }

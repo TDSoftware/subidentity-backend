@@ -16,5 +16,6 @@ export enum ExtrinsicMethod {
     CLOSETIP = "closeTip",
     TIP = "tip",
     BATCHALL = "batchAll",
-    BATCH = "batch"
+    BATCH = "batch",
+    NOTEPREIMAGE = "notePreimage",
 }

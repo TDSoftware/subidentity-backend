@@ -7,6 +7,17 @@ class ProposalRepository extends MySQLRepository<ProposalEntity> {
         return "proposal";
     }
 
+    async getByProposalIndexAndChainId(proposalIndex: number, chainId: number): Promise<ProposalEntity> {
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.proposal_index = ${proposalIndex} AND ${this.tableName}.chain_id = ${chainId}`;
+        return (await runSelectQuery<ProposalEntity>(query))[0];
+    }
+
+    async getByMotionHashAndChainId(motionHash: string, chainId: number): Promise<ProposalEntity> {
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.motion_hash = "${motionHash}" AND ${this.tableName}.chain_id = ${chainId}`;
+        return (await runSelectQuery<ProposalEntity>(query))[0];
+    }
+
+
 }
 
 export const proposalRepository = new ProposalRepository();

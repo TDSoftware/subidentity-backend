@@ -7,8 +7,8 @@ class TipProposalRepository extends MySQLRepository<TipProposalEntity > {
         return "tip_proposal";
     }
 
-    async getByMotionHash(motionHash: string): Promise<TipProposalEntity> {
-        const query = `SELECT id FROM ${this.tableName} WHERE ${this.tableName}.motion_hash = "${motionHash}"`;
+    async getByMotionHashAndChainId(motionHash: string, chainId: number): Promise<TipProposalEntity> {
+        const query = `SELECT id FROM ${this.tableName} WHERE ${this.tableName}.motion_hash = "${motionHash}" AND ${this.tableName}.chain_id = ${chainId}`;
         return (await runSelectQuery<TipProposalEntity>(query))[0];
     }
 }
