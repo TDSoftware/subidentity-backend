@@ -18,4 +18,5 @@ export enum ExtrinsicMethod {
     BATCHALL = "batchAll",
     BATCH = "batch",
     NOTEPREIMAGE = "notePreimage",
+    SECOND = "second",
 }

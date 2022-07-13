@@ -1,5 +1,6 @@
 CREATE TABLE referendum (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    referendum_index INT(11) UNSIGNED,
     proposal_id BIGINT UNSIGNED,
     FOREIGN KEY(proposal_id) REFERENCES proposal(id),
     started_at BIGINT UNSIGNED,

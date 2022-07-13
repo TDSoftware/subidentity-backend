@@ -1,6 +1,7 @@
 export interface ProposalEntity {
     id: number;
     proposal_index: number;
+    motion_hash: string;
     chain_id: number;
     method: string;
     section: string;

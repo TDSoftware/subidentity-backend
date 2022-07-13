@@ -19,12 +19,12 @@ export interface QueryResult {
  * We are using one global connection to the MySQL database in the whole
  * NodeJS app instance.
  */
-export const connection = mysql.createPool({ // TODO: move to .env
+//TODO instead of createpool, try createConnection
+export const connection = mysql.createConnection({ // TODO: move to .env
     host: process.env.DATABASE_HOST,
     user: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
-    connectionLimit: Number(process.env.DATABASE_MAX_CONNECTIONS)
 });
 
 export function runQuery(sqlStatement: string): Promise<void> {
@@ -37,7 +37,7 @@ export function runQuery(sqlStatement: string): Promise<void> {
     });
 }
 
-export function runSelectQuery<T>(sqlStatement: string): Promise<T[]> {
+export function  runSelectQuery<T>(sqlStatement: string): Promise<T[]> {
     return new Promise((resolve: (results: T[]) => void, reject: (error: MysqlError) => void) => {
         const callback: queryCallback = (error: MysqlError | null, results: T[]): void => {
             if (error) return reject(error);

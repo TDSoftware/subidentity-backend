@@ -10,5 +10,7 @@ export enum EventMethod {
     TipClosed = "TipClosed",
     Tabled = "Tabled",
     DemocracyProposed = "DemocracyProposed",
-    PreimageNoted = "PreimageNoted"
+    PreimageNoted = "PreimageNoted",
+    Seconded = "Seconded",
+    Voted = "Voted"
 }
