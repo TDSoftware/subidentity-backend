@@ -1,4 +1,4 @@
-import { EndorsementEntity } from './../types/entities/EndorsementEntity';
+import { EndorsementEntity } from "./../types/entities/EndorsementEntity";
 import { TipProposalStatus } from "./../types/enums/TipProposalStatus";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { SignedBlock } from "@polkadot/types/interfaces";
@@ -37,15 +37,15 @@ import { proposalRepository } from "../repositories/proposalRepository";
 import { ProposalEntity } from "../types/entities/ProposalEntity";
 import { ProposalStatus } from "../types/enums/ProposalStatus";
 import { u8aToString, stringToU8a } from "@polkadot/util";
-import { naclDecrypt } from "@polkadot/util-crypto"
-import { TipEntity } from '../types/entities/TipEntity';
+import { naclDecrypt } from "@polkadot/util-crypto";
+import { TipEntity } from "../types/entities/TipEntity";
 import { tipRepository } from "../repositories/tipRepository";
 import { ExtrinsicPhase } from "../types/enums/ExtrinsicPhase";
-import { endorsementRepository } from '../repositories/endorsementRepository';
-import { ReferendumVoteEntity } from '../types/entities/ReferendumVoteEntity';
-import { referendumVoteRepository } from '../repositories/referendumVoteRepository';
-import { referendumRepository } from '../repositories/referendumRepository';
-import { ReferendumEntity } from '../types/entities/ReferendumEntity';
+import { endorsementRepository } from "../repositories/endorsementRepository";
+import { ReferendumVoteEntity } from "../types/entities/ReferendumVoteEntity";
+import { referendumVoteRepository } from "../repositories/referendumVoteRepository";
+import { referendumRepository } from "../repositories/referendumRepository";
+import { ReferendumEntity } from "../types/entities/ReferendumEntity";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -94,7 +94,7 @@ export const indexingService = {
             let args: any;
 
             if(ex.signer) {
-                extrinsicSigner = ex.signer.toString()
+                extrinsicSigner = ex.signer.toString();
             } else extrinsicSigner = "None";
 
             const extrinsicEvents = blockEvents.filter((e: FrameSystemEventRecord) => e.phase.toString() != ExtrinsicPhase.INITIALIZATION && e.phase.toString() != ExtrinsicPhase.FINALIZATION && e.phase.asApplyExtrinsic.toNumber() === index).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
@@ -140,9 +140,9 @@ export const indexingService = {
                     break;
                 case (ExtrinsicSection.DEMOCRACY):
                     if(extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, extrinsic, blockEntity);
-                    if(extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) this.parseDemocracyPreimageNoted(extrinsicEvents, args, extrinsic, blockEntity);
                     if(extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity);
                     if(extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, args, extrinsic, blockEntity);
+                    break;
                 case (ExtrinsicSection.TIPS):
                     this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, ex, args, blockEntity, extrinsicSigner);
                     break;
@@ -184,7 +184,10 @@ export const indexingService = {
             const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
 
             if (!bountyEntry) {
-                const bounty: BountyEntity = <BountyEntity>{};
+                const bounty: BountyEntity = <BountyEntity>{
+                    chain_id: chain.id,
+                    bounty_id: bountyId
+                };
                 switch (be.method) {
                     case "BountyRejected": {
                         bounty.status = BountyStatus.Rejected;
@@ -203,8 +206,6 @@ export const indexingService = {
                         break;
                     }
                 }
-                bounty.chain_id = chain.id;
-                bounty.bounty_id = bountyId;
                 bountyRepository.insert(bounty);
             }
         });
@@ -354,7 +355,6 @@ export const indexingService = {
         const initializationEvents = blockEvents.filter((e: any) => e.phase.toString() === "Initialization").map((ev: FrameSystemEventRecord) => ev.event.toHuman());
         const treasuryEvents = initializationEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Treasury && e.method === EventMethod.Awarded);
         const newCounciltermEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.PhragmenElection && e.method === EventMethod.NewTerm);
-        
         const democracyTabledEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.Tabled);
 
         if(democracyTabledEvent) {
@@ -366,14 +366,13 @@ export const indexingService = {
                 proposalEntity.status = ProposalStatus.Tabled;
                 proposalEntity.chain_id = chain.id;
                 proposalEntity.proposed_at = blockEntity.id;
-                proposalEntity.proposal_index = proposalIndex
-                console.log(proposalEntity)
+                proposalEntity.proposal_index = proposalIndex;
                 await proposalRepository.insert(proposalEntity);
             } else {
                 proposal.status = ProposalStatus.Tabled;
                 proposal.chain_id = chain.id;
                 proposal.proposed_at = blockEntity.id;
-                proposal.proposal_index = proposalIndex
+                proposal.proposal_index = proposalIndex;
                 await proposalRepository.update(proposal);
             }
 
@@ -563,7 +562,7 @@ export const indexingService = {
                 const tip: TipEntity = <TipEntity>{};
                 const motionHash = args.hash;
 
-                let proposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
+                const proposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
                 if(proposalEntry) {
                     tip.tip_proposal_id = proposalEntry.id;
                 } else {
@@ -583,13 +582,13 @@ export const indexingService = {
                                 (account: AccountEntity) => {
                                     tip.tipper = account.id;
                                 }
-                            )
+                            );
                         } else {
                             tip.tipper = account.id;
                         }
                     }
-                )
-                // args.tip_value too big
+                );
+                // TODO args.tip_value should be used, but is too big?
                 tip.value = 50;
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
@@ -598,40 +597,39 @@ export const indexingService = {
         }
     },
 
+    /*
+        handles democracy propose calls
+    */
     async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, extrinsic: any, blockEntity: BlockEntity): Promise<void> {
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
-
         if (proposeEvent) {
             const proposal_index = JSON.parse(JSON.stringify(proposeEvent.data))[0]; 
             const proposal = await proposalRepository.getByProposalIndexAndChainId(proposal_index, chain.id);
             if (!proposal) {
-                const proposalEntity = <ProposalEntity>{};
-                // check if an account with extrinsic.signer.Id exists and set proposalEntity.proposedBy, if it doesn't exists, create it
+                const proposalEntity = <ProposalEntity>{
+                    chain_id: chain.id,
+                    proposal_index: proposal_index,
+                    status: ProposalStatus.Proposed,
+                    proposed_at: blockEntity.id,
+                    motion_hash: JSON.parse(JSON.stringify(args.proposal_hash))
+                };
                 const proposedBy = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
                 if (!proposedBy) {
-                    const account = <AccountEntity>{};
-                    account.address = extrinsic.signer.Id;
-                    account.chain_id = chain.id;
+                    const account = <AccountEntity>{
+                        address: extrinsic.signer.Id,
+                        chain_id: chain.id
+                    };
                     const insertedAccount = await accountRepository.insert(account);
                     proposalEntity.proposed_by = insertedAccount.id;
                 } else {
                     proposalEntity.proposed_by= proposedBy.id;
                 }
-                proposalEntity.chain_id = chain.id;
-                proposalEntity.proposal_index = proposal_index;
-                proposalEntity.status = ProposalStatus.Proposed;
-                proposalEntity.proposed_at = blockEntity.id;
-                proposalEntity.motion_hash = JSON.parse(JSON.stringify(args.proposal_hash));
 
-                //await proposalRepository.insert(proposalEntity);
+                await proposalRepository.insert(proposalEntity);
+            } else {
+                //TODO else if proposal exists, update it
             }
-
-            //TODO else if proposal exists, update it
         }
-    },
-
-    async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, extrinsic: any, blockEntity: BlockEntity): Promise<void> {
-        const preimageNotedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
     },
 
     /*
@@ -639,16 +637,17 @@ export const indexingService = {
     */
     async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
         const secondEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Seconded && e.section === EventSection.Democracy);
-        const endorsement = <EndorsementEntity>{}
+        const endorsement = <EndorsementEntity>{};
         const address = JSON.parse(JSON.stringify(secondEvent!.data))[0];
         const proposal_index = JSON.parse(JSON.stringify(secondEvent!.data))[1];
         endorsement.endorsed_at = blockEntity.id;
 
         const account = await accountRepository.findByAddressAndChain(address, chain.id);
         if (account === undefined) {
-            const newAccount = <AccountEntity>{};
-            newAccount.address = address;
-            newAccount.chain_id = chain.id;
+            const newAccount = <AccountEntity>{
+                address: address,
+                chain_id: chain.id
+            };
             const insertedAccount = await accountRepository.insert(newAccount);
             endorsement.endorser = insertedAccount.id;
         } else {
@@ -675,22 +674,22 @@ export const indexingService = {
         }
     },
 
+    /*
+        handles democracy votes
+    */
     async parseDemocracyVote(extrinsicEvents: Record<string, AnyJson>[], args: any, extrinsic: any, blockEntity: BlockEntity): Promise<void> {
         const voteEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Voted && e.section === EventSection.Democracy);
         if (voteEvent) {
-            const vote = <ReferendumVoteEntity>{}
+            const vote = <ReferendumVoteEntity>{};
             const voteDetails = JSON.parse(JSON.stringify(voteEvent!.data))[2].Standard;
-
             vote.referendum_id =  JSON.parse(JSON.stringify(voteEvent!.data))[1];
-            vote.vote = voteDetails.vote.vote == "Aye"
-            if (voteDetails.vote.conviction == "None") vote.conviction = 0.1
+            vote.vote = voteDetails.vote.vote == "Aye";
+            if (voteDetails.vote.conviction == "None") vote.conviction = 0.1;
             else {
-              vote.conviction = voteDetails.vote.conviction;
-            } 
-            vote.locked_value = voteDetails.balance
+                vote.conviction = voteDetails.vote.conviction;
+            }
+            vote.locked_value = voteDetails.balance;
             vote.voted_at = blockEntity.id;
-
-            console.log(vote)
 
             const voter = await accountRepository.findByAddressAndChain(extrinsic.signer.Id, chain.id);
             if (voter === undefined) {
@@ -725,6 +724,4 @@ export const indexingService = {
             }
         }
     }
-
-    
 };

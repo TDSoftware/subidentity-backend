@@ -1,4 +1,4 @@
-import { ReferendumVoteEntity } from './../types/entities/ReferendumVoteEntity';
+import { ReferendumVoteEntity } from "./../types/entities/ReferendumVoteEntity";
 import { runSelectQuery, runInsertQuery, QueryResult } from "../lib/mysqlDatabase";
 import { MySQLRepository } from "../lib/MySQLRepository";
 

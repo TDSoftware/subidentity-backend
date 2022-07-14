@@ -1,4 +1,4 @@
-import { EndorsementEntity } from './../types/entities/EndorsementEntity';
+import { EndorsementEntity } from "./../types/entities/EndorsementEntity";
 import { runSelectQuery, runInsertQuery, QueryResult } from "../lib/mysqlDatabase";
 import { MySQLRepository } from "../lib/MySQLRepository";
 

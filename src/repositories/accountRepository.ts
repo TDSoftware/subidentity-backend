@@ -28,8 +28,8 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
     }
 
     async insertIgnoreAccount(address: string, chain: number): Promise<AccountEntity> {
-        const data = [chain, address]
-        const query = `INSERT IGNORE into ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}")`
+        const data = [chain, address];
+        const query = `INSERT IGNORE into ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}")`;
         const { insertId } = await runInsertQuery(query, data);
         return await this.getById(insertId);
     }

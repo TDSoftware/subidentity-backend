@@ -1,4 +1,4 @@
-import { ProposalEntity } from '../types/entities/ProposalEntity';
+import { ProposalEntity } from "../types/entities/ProposalEntity";
 import { runSelectQuery, runInsertQuery, QueryResult } from "../lib/mysqlDatabase";
 import { MySQLRepository } from "../lib/MySQLRepository";
 

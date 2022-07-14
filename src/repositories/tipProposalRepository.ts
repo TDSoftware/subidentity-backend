@@ -1,6 +1,6 @@
 import { runSelectQuery, runInsertQuery, QueryResult } from "../lib/mysqlDatabase";
 import { MySQLRepository } from "../lib/MySQLRepository";
-import { TipProposalEntity } from '../types/entities/TipProposalEntity';
+import { TipProposalEntity } from "../types/entities/TipProposalEntity";
 
 class TipProposalRepository extends MySQLRepository<TipProposalEntity > {
     get tableName(): string {
