@@ -5,5 +5,6 @@ export interface ReferendumEntity {
     ended_at: number;
     proposal_id: number;
     status: string;
+    chain_id: number;
     vote_threshold: string;
 }

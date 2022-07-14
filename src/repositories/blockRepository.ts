@@ -11,6 +11,13 @@ class BlockRepository extends MySQLRepository<BlockEntity> {
         const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.hash = "${blockHash}" `;
         return (await runSelectQuery<BlockEntity>(query))[0];
     }
+    
+    async existsByBlockHash(blockHash: string): Promise<boolean> {
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.hash = "${blockHash}" `;
+        const result = await runSelectQuery<BlockEntity>(query);
+        return result.length > 0;
+    }
+
 }
 
 export const blockRepository = new BlockRepository();

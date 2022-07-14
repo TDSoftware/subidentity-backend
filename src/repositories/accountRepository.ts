@@ -43,6 +43,15 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
                        VALUES ?;`;
         return await runInsertQuery(query, data);
     }
+
+    // check if account exists by address and chainId, if it does return it, if it doesnt create it and return the inserted account
+    async getOrCreateAccount(address: string, chainId: number): Promise<AccountEntity> {
+        const account = await this.findByAddressAndChain(address, chainId);
+        if (account) {
+            return account;
+        }
+        return await this.insert(<AccountEntity>{chain_id: chainId, address: address});
+    }
 }
 
 export const accountRepository = new AccountRepository();

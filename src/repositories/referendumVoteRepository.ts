@@ -8,8 +8,8 @@ class ReferendumVoteRepository extends MySQLRepository<ReferendumVoteEntity> {
     }
 
     // get by voter and referendum index and voter
-    async getByVoterAndReferendumIndexAndChainId(voter: number, referendumIndex: number, chainId: number): Promise<ReferendumVoteEntity> {
-        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.voter = ${voter} AND ${this.tableName}.referendum_index = ${referendumIndex} AND ${this.tableName}.chain_id = ${chainId}`;
+    async getByVoterAndReferendumId(voter: number, referendumId: number): Promise<ReferendumVoteEntity> {
+        const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.voter = ${voter} AND ${this.tableName}.referendum_id = ${referendumId}`;
         return (await runSelectQuery<ReferendumVoteEntity>(query))[0];
     }
 

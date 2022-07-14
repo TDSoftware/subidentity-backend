@@ -12,5 +12,10 @@ export enum EventMethod {
     DemocracyProposed = "DemocracyProposed",
     PreimageNoted = "PreimageNoted",
     Seconded = "Seconded",
-    Voted = "Voted"
+    Voted = "Voted",
+    Started = "Started",
+    Executed = "Executed",
+    Passed = "Passed",
+    NotPassed = "NotPassed",
+    Cancelled = "Cancelled"
 }
