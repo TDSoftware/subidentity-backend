@@ -221,15 +221,16 @@ export const indexingService = {
             councilMotionEntry.from_block = blockEntity.id;
             await councilMotionRepository.update(councilMotionEntry);
         } else if (!councilMotionEntry) {
-            const councilMotion = <CouncilMotionEntity>{};
-            councilMotion.chain_id = chain.id;
-            councilMotion.motion_hash = councilMotionHash;
-            councilMotion.method = proposalMethod;
-            councilMotion.section = proposalSection;
-            councilMotion.proposal_index = proposalIndex;
-            councilMotion.status = CouncilMotionStatus.Proposed;
-            councilMotion.proposed_by = proposer.id;
-            councilMotion.from_block = blockEntity.id;
+            const councilMotion = <CouncilMotionEntity>{
+                chain_id: chain.id,
+                motion_hash: councilMotionHash,
+                proposal_index: proposalIndex,
+                method: proposalMethod,
+                section: proposalSection,
+                proposed_by: proposer.id,
+                from_block: blockEntity.id,
+                status: CouncilMotionStatus.Proposed
+            };
             councilMotionEntry = await councilMotionRepository.insert(councilMotion);
         }
 
@@ -407,17 +408,15 @@ export const indexingService = {
             const proposalIndex = JSON.parse(JSON.stringify(democracyTabledEvent.data))[0];
             const proposal = await proposalRepository.getByProposalIndexAndChainId(proposalIndex, chain.id);
             if (!proposal) {
-                const proposalEntity: ProposalEntity = <ProposalEntity>{};
-                proposalEntity.proposal_index = proposalIndex;
-                proposalEntity.status = ProposalStatus.Tabled;
-                proposalEntity.chain_id = chain.id;
-                proposalEntity.proposed_at = blockEntity.id;
-                proposalEntity.proposal_index = proposalIndex;
+                const proposalEntity: ProposalEntity = <ProposalEntity>{
+                    chain_id: chain.id,
+                    proposal_index: proposalIndex,
+                    status: ProposalStatus.Tabled,
+                };
                 await proposalRepository.insert(proposalEntity);
             } else {
                 proposal.status = ProposalStatus.Tabled;
                 proposal.chain_id = chain.id;
-                proposal.proposed_at = blockEntity.id;
                 proposal.proposal_index = proposalIndex;
                 await proposalRepository.update(proposal);
             }
@@ -483,20 +482,22 @@ export const indexingService = {
         let existingVote = <any>{};
         if (councilMotionEntry) councilMotionId = councilMotionEntry.id;
         else {
-            const councilMotionEntry = <CouncilMotionEntity>{};
-            councilMotionEntry.chain_id = chain.id;
-            councilMotionEntry.motion_hash = motionHash;
+            const councilMotionEntry = <CouncilMotionEntity>{
+                motion_hash: motionHash,
+                chain_id: chain.id
+            };
             const entry = await councilMotionRepository.insert(councilMotionEntry);
             councilMotionId = entry.id;
         }
         existingVote = await councilMotionVoteRepository.getByCouncilMotionIdAndAccountId(councilMotionId, account.id);
         if (!existingVote) {
             const approved = voteApproved;
-            const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{};
-            vote.account_id = account.id;
-            vote.council_motion_id = councilMotionId;
-            vote.approved = approved;
-            vote.block = blockEntity.id;
+            const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{
+                council_motion_id: councilMotionId,
+                account_id: account.id,
+                approved: approved,
+                block: blockEntity.id
+            };
             councilMotionVoteRepository.insert(vote);
         }
     },
