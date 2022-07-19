@@ -365,13 +365,13 @@ export const indexingService = {
         const democracyNotPassedEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.NotPassed);
         const democracyCancelledEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.Cancelled);
 
-        if(democracyStartedEvent) {
-            const referendum_index =  JSON.parse(JSON.stringify(democracyStartedEvent.data))[0];
+        if (democracyStartedEvent) {
+            const referendum_index = JSON.parse(JSON.stringify(democracyStartedEvent.data))[0];
             const voteThreshold = JSON.parse(JSON.stringify(democracyStartedEvent.data))[1];
 
             // check if a referendum exists with referendum index and chain id 
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
-            if(!referendum){
+            if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     chain_id: chain.id,
                     referendum_index: referendum_index,
@@ -386,11 +386,11 @@ export const indexingService = {
                 referendumRepository.update(referendum);
             }
         }
-        //TODO democracy executed 
-        if(democracyExecutedEvent) {
-            const referendum_index =  JSON.parse(JSON.stringify(democracyExecutedEvent.data))[0];
+
+        if (democracyExecutedEvent) {
+            const referendum_index = JSON.parse(JSON.stringify(democracyExecutedEvent.data))[0];
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
-            if(!referendum){
+            if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
                     status: ReferendumStatus.Executed,
@@ -404,26 +404,26 @@ export const indexingService = {
             }
         }
 
-        if(democracyPassedEvent) {
-            const referendum_index =  JSON.parse(JSON.stringify(democracyPassedEvent.data))[0];
+        if (democracyPassedEvent) {
+            const referendum_index = JSON.parse(JSON.stringify(democracyPassedEvent.data))[0];
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
-            if(!referendum){
+            if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
-                    status: ReferendumStatus.Passed                
+                    status: ReferendumStatus.Passed
                 };
                 referendumRepository.insert(referendumEntity);
             }
         }
 
-        if(democracyNotPassedEvent) {
-            const referendum_index =  JSON.parse(JSON.stringify(democracyNotPassedEvent.data))[0];
+        if (democracyNotPassedEvent) {
+            const referendum_index = JSON.parse(JSON.stringify(democracyNotPassedEvent.data))[0];
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
-            if(!referendum){
+            if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
                     status: ReferendumStatus.NotPassed,
-                    ended_at: blockEntity.id              
+                    ended_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
@@ -433,14 +433,14 @@ export const indexingService = {
             }
         }
 
-        if(democracyCancelledEvent) {
-            const referendum_index =  JSON.parse(JSON.stringify(democracyCancelledEvent.data))[0];
+        if (democracyCancelledEvent) {
+            const referendum_index = JSON.parse(JSON.stringify(democracyCancelledEvent.data))[0];
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
-            if(!referendum){
+            if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
                     status: ReferendumStatus.Cancelled,
-                    ended_at: blockEntity.id              
+                    ended_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
@@ -471,7 +471,6 @@ export const indexingService = {
         }
 
         if (newCounciltermEvent) {
-            //TODO implement to_block, discuss how to handle this the best way
             const councilterm = <CounciltermEntity>{};
             councilterm.from_block = blockEntity.id;
             const counciltermInsert = await counciltermRepository.insert(councilterm);
@@ -528,10 +527,11 @@ export const indexingService = {
         if (claimedEvents) {
             claimedEvents.forEach((ce: Record<string, AnyJson>) => {
                 const claimEventData = JSON.parse(JSON.stringify(ce.data));
-                const bounty = <BountyEntity>{};
-                bounty.bounty_id = claimEventData[0];
-                bounty.status = BountyStatus.Claimed;
-                bounty.chain_id = chain.id;
+                const bounty = <BountyEntity>{
+                    bounty_id: claimEventData[0],
+                    status: BountyStatus.Claimed,
+                    chain_id: chain.id
+                };
                 bountyRepository.insert(bounty);
             });
         }
@@ -556,16 +556,8 @@ export const indexingService = {
         if (!existingVote) {
             const approved = voteApproved;
             const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{};
-            const voter = await accountRepository.findByAddressAndChain(accountId, chain.id);
-            if (voter) {
-                vote.account_id = voter.id;
-            } else {
-                const account: AccountEntity = <AccountEntity>{};
-                account.address = accountId;
-                account.chain_id = chain.id;
-                const accountEntry = await accountRepository.insert(account);
-                vote.account_id = accountEntry.id;
-            }
+            const voter = await accountRepository.getOrCreateAccount(accountId, chain.id);
+            vote.account_id = voter.id;
             vote.council_motion_id = councilMotionId;
             vote.approved = approved;
             vote.block = blockEntity.id;
@@ -666,7 +658,7 @@ export const indexingService = {
                 }
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 tip.tipper = account.id;
-                tip.value = args.tip_value; // data truncated error mysql
+                tip.value = parseInt(args.tip_value);
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
                 break;
@@ -757,7 +749,7 @@ export const indexingService = {
             const vote = <ReferendumVoteEntity>{
                 referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
                 vote: voteDetails.vote.vote == "Aye",
-                locked_value: voteDetails.balance, // data truncated error mysql
+                locked_value: parseInt(voteDetails.balance),
                 voted_at: blockEntity.id
             };
 
@@ -790,5 +782,5 @@ export const indexingService = {
                 await referendumVoteRepository.update(vote);
             }
         }
-    } 
+    }
 };
