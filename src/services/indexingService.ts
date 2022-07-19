@@ -403,20 +403,51 @@ export const indexingService = {
                 referendumRepository.update(referendum);
             }
         }
-        //TODO democracy passed
+
         if(democracyPassedEvent) {
-            console.log("democracy passed");
-            console.log(democracyPassedEvent);
+            const referendum_index =  JSON.parse(JSON.stringify(democracyPassedEvent.data))[0];
+            const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
+            if(!referendum){
+                const referendumEntity: ReferendumEntity = <ReferendumEntity>{
+                    referendum_index: referendum_index,
+                    status: ReferendumStatus.Passed                
+                };
+                referendumRepository.insert(referendumEntity);
+            }
         }
-        //TODO democracy notpassed 
+
         if(democracyNotPassedEvent) {
-            console.log("democracy notpassed");
-            console.log(democracyNotPassedEvent);
+            const referendum_index =  JSON.parse(JSON.stringify(democracyNotPassedEvent.data))[0];
+            const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
+            if(!referendum){
+                const referendumEntity: ReferendumEntity = <ReferendumEntity>{
+                    referendum_index: referendum_index,
+                    status: ReferendumStatus.NotPassed,
+                    ended_at: blockEntity.id              
+                };
+                referendumRepository.insert(referendumEntity);
+            } else {
+                referendum.status = ReferendumStatus.NotPassed;
+                referendum.ended_at = blockEntity.id;
+                referendumRepository.update(referendum);
+            }
         }
-        //TODO democracy cancelled
+
         if(democracyCancelledEvent) {
-            console.log("democracy cancelled");
-            console.log(democracyCancelledEvent);
+            const referendum_index =  JSON.parse(JSON.stringify(democracyCancelledEvent.data))[0];
+            const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
+            if(!referendum){
+                const referendumEntity: ReferendumEntity = <ReferendumEntity>{
+                    referendum_index: referendum_index,
+                    status: ReferendumStatus.Cancelled,
+                    ended_at: blockEntity.id              
+                };
+                referendumRepository.insert(referendumEntity);
+            } else {
+                referendum.status = ReferendumStatus.Cancelled;
+                referendum.ended_at = blockEntity.id;
+                referendumRepository.update(referendum);
+            }
         }
 
         if (democracyTabledEvent) {
@@ -437,7 +468,6 @@ export const indexingService = {
                 proposal.proposal_index = proposalIndex;
                 await proposalRepository.update(proposal);
             }
-
         }
 
         if (newCounciltermEvent) {
@@ -636,7 +666,7 @@ export const indexingService = {
                 }
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 tip.tipper = account.id;
-                tip.value = args.tip_value;
+                tip.value = args.tip_value; // data truncated error mysql
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
                 break;
@@ -727,17 +757,17 @@ export const indexingService = {
             const vote = <ReferendumVoteEntity>{
                 referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
                 vote: voteDetails.vote.vote == "Aye",
-                locked_value: 5, //  voteDetails.balance
+                locked_value: voteDetails.balance, // data truncated error mysql
                 voted_at: blockEntity.id
-            }
+            };
 
             if (voteDetails.vote.conviction == "None") vote.conviction = 0.1;
             else {
-                vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9\.]/g, ''));
+                vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
             }
 
             const voter = await accountRepository.getOrCreateAccount(extrinsic.signer.Id, chain.id);
-            vote.voter = voter.id
+            vote.voter = voter.id;
 
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(vote.referendum_id, chain.id);
             if (referendum === undefined) {
