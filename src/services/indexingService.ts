@@ -77,6 +77,11 @@ export const indexingService = {
     },
 
     //TODO define extrinsic.method to use in combination with extrinsicSigner instead of just extrinsic (for utility batch calls)
+    //TODO go through every part and extensively test if the data matches the one provided by subscan or other polkadot explorers
+    //TODO get the method and section from democracy proposals (from the proposal preimage? encoded proposal?)
+    //TODO write more advanced SQL queries to reduce LOC
+    //TODO make the code ready to be run on several threads (parallel)
+    //TODO adjust the order of async calls to make the code more efficient
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         const apiAt = await api.at(blockHash);
@@ -142,13 +147,11 @@ export const indexingService = {
     },
 
     async parseCouncilClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
-        const motionHash = args.proposal_hash;
-        const index = Number(args.index);
-        const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash);
+        const councilMotionEntry = await councilMotionRepository.getByMotionHash(args.proposal_hash);
         const councilEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Council);
         const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{
-            motion_hash: motionHash,
-            proposal_index: index,
+            motion_hash: args.proposal_hash,
+            proposal_index: Number(args.index),
             to_block: blockEntity.id,
             chain_id: chain.id
         };
@@ -474,16 +477,14 @@ export const indexingService = {
     },
 
     async parseCouncilVote(args: any, blockEntity: BlockEntity, chain: ChainEntity, extrinsicSigner: string): Promise<void> {
-        const motionHash = args.proposal;
-        const voteApproved = args.approve;
-        const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash);
+        const councilMotionEntry = await councilMotionRepository.getByMotionHash(args.proposal);
         const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
         let councilMotionId = <number>{};
         let existingVote = <any>{};
         if (councilMotionEntry) councilMotionId = councilMotionEntry.id;
         else {
             const councilMotionEntry = <CouncilMotionEntity>{
-                motion_hash: motionHash,
+                motion_hash: args.proposal,
                 chain_id: chain.id
             };
             const entry = await councilMotionRepository.insert(councilMotionEntry);
@@ -491,7 +492,7 @@ export const indexingService = {
         }
         existingVote = await councilMotionVoteRepository.getByCouncilMotionIdAndAccountId(councilMotionId, account.id);
         if (!existingVote) {
-            const approved = voteApproved;
+            const approved = args.approve;
             const vote: CouncilMotionVoteEntity = <CouncilMotionVoteEntity>{
                 council_motion_id: councilMotionId,
                 account_id: account.id,
