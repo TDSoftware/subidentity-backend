@@ -112,7 +112,7 @@ export const indexingService = {
 
             switch (extrinsicSection) {
                 case (ExtrinsicSection.COUNCIL):
-                    if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(ex, args, blockEntity, chain, extrinsicSigner);
+                    if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
                     if (extrinsicMethod === ExtrinsicMethod.CLOSE) this.parseCouncilClose(extrinsicEvents, args, blockEntity);
                     if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseCouncilPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                     break;
@@ -130,12 +130,12 @@ export const indexingService = {
                     if (extrinsicMethod === ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
                     break;
                 case (ExtrinsicSection.DEMOCRACY):
-                    if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, extrinsic, blockEntity, extrinsicSigner);
+                    if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                     if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity);
-                    if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, args, extrinsic, blockEntity, extrinsicSigner);
+                    if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
                     break;
                 case (ExtrinsicSection.TIPS):
-                    this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, ex, args, blockEntity, extrinsicSigner);
+                    this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
                     break;
             }
         });
@@ -473,7 +473,7 @@ export const indexingService = {
         }
     },
 
-    async parseCouncilVote(ex: any, args: any, blockEntity: BlockEntity, chain: ChainEntity, extrinsicSigner: string): Promise<void> {
+    async parseCouncilVote(args: any, blockEntity: BlockEntity, chain: ChainEntity, extrinsicSigner: string): Promise<void> {
         const motionHash = args.proposal;
         const voteApproved = args.approve;
         const councilMotionEntry = await councilMotionRepository.getByMotionHash(motionHash);
@@ -502,7 +502,7 @@ export const indexingService = {
         }
     },
 
-    async parseTipExtrinsics(extrinsicEvents: Record<string, AnyJson>[], extrinsicMethod: any, extrinsic: any, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseTipExtrinsics(extrinsicEvents: Record<string, AnyJson>[], extrinsicMethod: any, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         switch (extrinsicMethod) {
             case ExtrinsicMethod.REPORTAWESOME: {
                 const tipEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.NewTip);
@@ -596,7 +596,7 @@ export const indexingService = {
     /*
         handles democracy propose calls
     */
-    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, extrinsic: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
             const proposal_index = JSON.parse(JSON.stringify(proposeEvent.data))[0];
@@ -638,10 +638,11 @@ export const indexingService = {
 
         const proposal = await proposalRepository.getByProposalIndexAndChainId(proposal_index, chain.id);
         if (proposal === undefined) {
-            const proposalEntity = <ProposalEntity>{};
-            proposalEntity.proposal_index = proposal_index;
-            proposalEntity.chain_id = chain.id;
-            proposalEntity.status = ProposalStatus.Proposed;
+            const proposalEntity = <ProposalEntity>{
+                chain_id: chain.id,
+                proposal_index: proposal_index,
+                status: ProposalStatus.Proposed
+            };
             const insertedProposal = await proposalRepository.insert(proposalEntity);
             endorsement.proposal_id = insertedProposal.id;
         } else {
@@ -659,7 +660,7 @@ export const indexingService = {
     /*
         handles democracy votes
     */
-    async parseDemocracyVote(extrinsicEvents: Record<string, AnyJson>[], args: any, extrinsic: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseDemocracyVote(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const voteEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Voted && e.section === EventSection.Democracy);
         if (voteEvent) {
             const voteDetails = JSON.parse(JSON.stringify(voteEvent!.data))[2].Standard;
