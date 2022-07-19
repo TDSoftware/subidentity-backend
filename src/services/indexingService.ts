@@ -666,13 +666,13 @@ export const indexingService = {
             const voteDetails = JSON.parse(JSON.stringify(voteEvent!.data))[2].Standard;
             const vote = <ReferendumVoteEntity>{
                 referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
-                vote: voteDetails.vote.vote == Vote.Aye,
+                vote: voteDetails.vote.vote === Vote.Aye,
                 locked_value: parseInt(voteDetails.balance),
                 voted_at: blockEntity.id
             };
 
             // getting the conviction from the string of the response
-            if (voteDetails.vote.conviction == "None") vote.conviction = 0.1;
+            if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
             else {
                 vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
             }

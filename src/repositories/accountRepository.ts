@@ -20,20 +20,6 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
         return (await runSelectQuery<AccountEntity>(query))[0];
     }
 
-    async insertOrUpdateAccount(chain: number, address: string): Promise<AccountEntity> {
-        const data = [chain, address];
-        const query = `INSERT INTO ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}") ON DUPLICATE KEY UPDATE chain_id = values(chain_id), address = values(address)`;
-        const { insertId } = await runInsertQuery(query, data);
-        return await this.getById(insertId);
-    }
-
-    async insertIgnoreAccount(address: string, chain: number): Promise<AccountEntity> {
-        const data = [chain, address];
-        const query = `INSERT IGNORE into ${this.tableName}(chain_id, address) VALUES(${chain}, "${address}")`;
-        const { insertId } = await runInsertQuery(query, data);
-        return await this.getById(insertId);
-    }
-
     async insertOrUpdateAccountsOfIdentities(identities: Identity[], chainId: number): Promise<QueryResult> {
         const data = [identities.map((identity: Identity) => [identity.basicInfo.address, chainId])];
         const query = `INSERT IGNORE ${accountRepository.tableName}(
@@ -44,7 +30,6 @@ class AccountRepository extends MySQLRepository<AccountEntity> {
         return await runInsertQuery(query, data);
     }
 
-    // check if account exists by address and chainId, if it does return it, if it doesnt create it and return the inserted account
     async getOrCreateAccount(address: string, chainId: number): Promise<AccountEntity> {
         const account = await this.findByAddressAndChain(address, chainId);
         if (account) {
