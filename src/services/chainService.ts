@@ -10,10 +10,14 @@ import { ChainEntity } from "../types/entities/ChainEntity";
 export const chainService = {
 
     async createChain(wsProvider: string): Promise<ChainStatusDTO | undefined> {
+        const chainName = await getChainName(wsProvider);
+        const existingChain = await chainRepository.findByChainName(chainName);
+        if (existingChain) {
+            wsProviderService.createWsProvider(existingChain.id, wsProvider);
+            return chainMapper.toStatusDTO(existingChain, true);
+        }
         const isArchive = await isArchiveNode(wsProvider);
         const implmentsIdentityPallet = await implementsIdentityPallet(wsProvider);
-        const chainName = await getChainName(wsProvider);
-
         if (isArchive && implmentsIdentityPallet) {
             const token: Token = await getTokenDetails(wsProvider);
             const chain = {
@@ -42,6 +46,16 @@ export const chainService = {
         if (!chain)
             return await this.createChain(wsProvider);
         return chainMapper.toStatusDTO(chain, true);
+    },
+   
+    async updateChainStatus(id: number, status: ChainStatus): Promise<void> {
+        const chain = await chainRepository.getById(id);
+        if (!chain) {
+            console.log("Could not find the chain with id " + id + " to update it's status to " + status);
+            return;
+        }
+        chain.status = status;
+        chainRepository.update(chain);
     },
 
     async getChainEntityByWsProvider(wsProvider: string): Promise<ChainEntity> {
