@@ -17,7 +17,6 @@ import { councilMotionVoteRepository } from "../repositories/councilMotionVoteRe
 import { CouncilMotionVoteEntity } from "../types/entities/CouncilMotionVoteEntity";
 import { treasureProposalRepository } from "../repositories/treasuryProposalRepository";
 import { accountRepository } from "../repositories/accountRepository";
-import { AccountEntity } from "../types/entities/AccountEntity";
 import { CouncilMotionStatus } from "../types/enums/CouncilMotionStatus";
 import { BountyStatus } from "../types/enums/BountyStatus";
 import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
@@ -77,6 +76,8 @@ export const indexingService = {
         indexingService.readBlock(startHash.toString(), to);
     },
 
+    //TODO define extrinsic.method to use in combination with extrinsicSigner instead of just extrinsic (for utility batch calls)
+
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
@@ -88,7 +89,6 @@ export const indexingService = {
 
         extrinsics.forEach(async (ex: any, index: number) => {
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
-            //TODO define extrinsic.method to use in combination with extrinsicSigner instead of just extrinsic (for utility batch calls)
             let extrinsicMethod = extrinsic.method.method;
             let extrinsicSection = extrinsic.method.section;
             let extrinsicSigner: string;
