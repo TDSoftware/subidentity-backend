@@ -1,4 +1,4 @@
 export enum Vote {
-    Aye = "AYE",
-    Nay = "NAY"
+    Aye = "Aye",
+    Nay = "Nay"
 }
