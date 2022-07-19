@@ -411,7 +411,7 @@ export const indexingService = {
                 const proposalEntity: ProposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
                     proposal_index: proposalIndex,
-                    status: ProposalStatus.Tabled,
+                    status: ProposalStatus.Tabled
                 };
                 await proposalRepository.insert(proposalEntity);
             } else {
@@ -578,7 +578,7 @@ export const indexingService = {
                 } else {
                     const tipProposal = <TipProposalEntity>{
                         motion_hash: motionHash,
-                        chain_id: chain.id,
+                        chain_id: chain.id
                     };
                     const insertedTipProposal = await tipProposalRepository.insert(tipProposal);
                     tip.tip_proposal_id = insertedTipProposal.id;
