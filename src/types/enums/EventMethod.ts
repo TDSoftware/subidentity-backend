@@ -17,5 +17,8 @@ export enum EventMethod {
     Executed = "Executed",
     Passed = "Passed",
     NotPassed = "NotPassed",
-    Cancelled = "Cancelled"
+    Cancelled = "Cancelled",
+    Approved = "Approved",
+    Rejected = "Rejected",
+    Disapproved = "Disapproved"
 }

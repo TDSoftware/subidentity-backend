@@ -115,34 +115,50 @@ export const indexingService = {
                 }
             } else args = extrinsic.method.args;
 
-            switch (extrinsicSection) {
-                case (ExtrinsicSection.COUNCIL):
-                    if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
-                    if (extrinsicMethod === ExtrinsicMethod.CLOSE) this.parseCouncilClose(extrinsicEvents, args, blockEntity);
-                    if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseCouncilPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                    break;
-                case (ExtrinsicSection.BOUNTIES):
-                    if (extrinsicMethod === ExtrinsicMethod.PROPOSEBOUNTY) this.parseProposeBounty(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                    if (extrinsicMethod === ExtrinsicMethod.CLAIMBOUNTY) this.parseClaimBounty(extrinsicEvents);
-                    break;
-                case (ExtrinsicSection.TREASURY):
-                    if (extrinsicMethod === ExtrinsicMethod.PROPOSESPEND) this.parseTreasuryProposeSpend(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                    break;
-                case (ExtrinsicSection.TIMESTAMP):
-                    if (extrinsicMethod === ExtrinsicMethod.SET) this.parseTimestampSet(blockEvents, blockEntity);
-                    break;
-                case (ExtrinsicSection.MULTISIG):
-                    if (extrinsicMethod === ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
-                    break;
-                case (ExtrinsicSection.DEMOCRACY):
-                    if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                    if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity);
-                    if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
-                    break;
-                case (ExtrinsicSection.TIPS):
-                    this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
-                    break;
-            }
+            this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+        });
+    },
+
+    async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+        switch (extrinsicSection) {
+            case (ExtrinsicSection.COUNCIL):
+                if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.CLOSE) this.parseCouncilClose(extrinsicEvents, args, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseCouncilPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                break;
+            case (ExtrinsicSection.BOUNTIES):
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSEBOUNTY) this.parseProposeBounty(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.CLAIMBOUNTY) this.parseClaimBounty(extrinsicEvents);
+                break;
+            case (ExtrinsicSection.TREASURY):
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSESPEND) this.parseTreasuryProposeSpend(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                break;
+            case (ExtrinsicSection.TIMESTAMP):
+                if (extrinsicMethod === ExtrinsicMethod.SET) this.parseTimestampSet(blockEvents, blockEntity);
+                break;
+            case (ExtrinsicSection.MULTISIG):
+                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
+                break;
+            case (ExtrinsicSection.DEMOCRACY):
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
+                break;
+            case (ExtrinsicSection.TIPS):
+                this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
+                break;
+            case (ExtrinsicSection.UTILITY):
+                if(extrinsicMethod === ExtrinsicMethod.BATCH) this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
+                break;
+        }
+    },
+
+    async parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+        args.calls.map(async (arg: any) => {
+            const callArgs = arg.args;
+            const callMethod = arg.method;
+            const callSection = arg.section;
+            await this.parseMethodAndSection(callSection, callMethod, callArgs, extrinsicEvents, blockEvents, callArgs, blockEntity, extrinsicSigner);
         });
     },
 
@@ -157,11 +173,11 @@ export const indexingService = {
         };
         const councilEventMethod = councilEvents.map((ev: Record<string, AnyJson>) => ev.method);
 
-        if (councilEventMethod.some((ev: AnyJson) => ev === "Approved")) {
+        if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Approved)) {
             councilMotion.status = CouncilMotionStatus.Approved;
-        } else if (councilEventMethod.some((ev: AnyJson) => ev === "Rejected")) {
+        } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Rejected)) {
             councilMotion.status = CouncilMotionStatus.Rejected;
-        } else if (councilEventMethod.some((ev: AnyJson) => ev === "Disapproved")) {
+        } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Disapproved)) {
             councilMotion.status = CouncilMotionStatus.Disapproved;
         }
 
