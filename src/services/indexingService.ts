@@ -156,7 +156,8 @@ export const indexingService = {
 
     async parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         for (let index = 0; index < args.calls.length; index++) {
-            await this.parseMethodAndSection(args.calls[index].method , args.calls[index].section, args.calls[index], extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+            const call = args.calls[index];
+            await this.parseMethodAndSection(call.section , call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
         };
     },
 
