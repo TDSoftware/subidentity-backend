@@ -53,37 +53,31 @@ let api: ApiPromise;
 
 export const indexingService = {
 
-    async readBlock(blockHash: string, to: number): Promise<void> {
+    async readBlock(blockHash: string, from: number, to: number): Promise<void> {
         const block = await api.rpc.chain.getBlock(blockHash);
-        if (block.block.header.number.toNumber() >= to) indexingService.readBlock(block.block.header.parentHash.toString(), to);
+        if (block.block.header.number.toNumber() >= to) indexingService.readBlock(block.block.header.parentHash.toString(), from, to);
         else {
             console.log(new Date());
             process.exit(0);
         }
-        indexingService.parseBlock(block, blockHash);
+        indexingService.parseBlock(block, blockHash, from, to);
     },
 
-    async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
-        await indexingService.parseExtrinsic(block, blockHash);
+    async parseBlock(block: SignedBlock, blockHash: string, from: number, to: number): Promise<void> {
+        await indexingService.parseExtrinsic(block, blockHash, from, to);
     },
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
         console.log("Indexing start: " + new Date());
+        console.time("Batch finished. " + (from - to) + " blocks indexed in");
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
         const startHash = await api.rpc.chain.getBlockHash(from);
-        indexingService.readBlock(startHash.toString(), to);
+        indexingService.readBlock(startHash.toString(), from, to);
     },
 
-    //TODO define extrinsic.method to use in combination with extrinsicSigner instead of just extrinsic (for utility batch calls)
-    //TODO go through every part and extensively test if the data matches the one provided by subscan or other polkadot explorers
-    //TODO get the method and section from democracy proposals (from the proposal preimage? encoded proposal?)
-    //TODO write more advanced SQL queries to reduce LOC
-    //TODO make the code ready to be run on several threads (parallel)
-    //TODO adjust the order of async calls to make the code more efficient
-
-    async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
+    async parseExtrinsic(block: SignedBlock, blockHash: string, from: number, to: number): Promise<void> {
         console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
@@ -120,6 +114,7 @@ export const indexingService = {
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
         console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        if (block.block.header.number.toNumber() === to) console.timeEnd("Batch finished. " + (from - to) + " blocks indexed in");
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -227,8 +222,6 @@ export const indexingService = {
 
     async parseCouncilPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposal = args.proposal;
-        const proposalMethod = proposal.method;
-        const proposalSection = proposal.section;
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Council);
         const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1];
         const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2];
@@ -236,8 +229,8 @@ export const indexingService = {
         const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
         if (councilMotionEntry) {
-            councilMotionEntry.method = proposalMethod;
-            councilMotionEntry.section = proposalSection;
+            councilMotionEntry.method = proposal.method;
+            councilMotionEntry.section = proposal.section;
             councilMotionEntry.proposal_index = proposalIndex;
             councilMotionEntry.proposed_by = proposer.id;
             councilMotionEntry.from_block = blockEntity.id;
@@ -247,8 +240,8 @@ export const indexingService = {
                 chain_id: chain.id,
                 motion_hash: councilMotionHash,
                 proposal_index: proposalIndex,
-                method: proposalMethod,
-                section: proposalSection,
+                method: proposal.method,
+                section: proposal.section,
                 proposed_by: proposer.id,
                 from_block: blockEntity.id,
                 status: CouncilMotionStatus.Proposed
@@ -256,7 +249,7 @@ export const indexingService = {
             councilMotionEntry = await councilMotionRepository.insert(councilMotion);
         }
 
-        if (proposalMethod === ExtrinsicMethod.APPROVEPROPOSAL && proposalSection === ExtrinsicSection.TREASURY) {
+        if (proposal.method === ExtrinsicMethod.APPROVEPROPOSAL && proposal.section === ExtrinsicSection.TREASURY) {
             const proposalID = proposal.args.proposal_id;
             const proposalEntry = await treasureProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
             councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
@@ -289,7 +282,6 @@ export const indexingService = {
 
     async parseProposeBounty(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const bountiesProposedEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Bounties && e.method === EventMethod.BountyProposed);
-        // for loop bountiesProposedEvents
         for (let index = 0; index < bountiesProposedEvents.length; index++) {
             const bpe = bountiesProposedEvents[index];
             const bountyId = JSON.parse(JSON.stringify(bpe.data))[0];
@@ -319,7 +311,6 @@ export const indexingService = {
 
     async parseTreasuryProposeSpend(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const treasuryProposedEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Treasury && e.method === EventMethod.Proposed);
-        // for loop treasuryProposedEvents
         for (let index = 0; index < treasuryProposedEvents.length; index++) {
             const tpe = treasuryProposedEvents[index];
             const proposalId = JSON.parse(JSON.stringify(tpe.data))[0];
@@ -453,7 +444,6 @@ export const indexingService = {
             councilterm.from_block = blockEntity.id;
             const counciltermInsert = await counciltermRepository.insert(councilterm);
             const counciltermData = Array(newCounciltermEvent.data).flat().flat();
-            // for loop for councilterm data
             for (let i = 0; i < counciltermData.length; i++) {
                 const ctd = counciltermData[i];
                 const councilorEntity = <CouncilorEntity>{};
@@ -466,7 +456,6 @@ export const indexingService = {
         }
 
         if (treasuryEvents) {
-            // for loop for treasury events
             for (let i = 0; i < treasuryEvents.length; i++) {
                 const te = treasuryEvents[i];
                 const treasuryEvent = JSON.parse(JSON.stringify(te));
