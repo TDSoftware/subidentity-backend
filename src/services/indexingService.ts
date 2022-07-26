@@ -84,6 +84,7 @@ export const indexingService = {
     //TODO adjust the order of async calls to make the code more efficient
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
+        console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -93,7 +94,7 @@ export const indexingService = {
         else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
 
         for (let index = 0; index < extrinsics.length; index++){
-            const ex = extrinsics[index]
+            const ex = extrinsics[index];
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
             let extrinsicMethod = extrinsic.method.method;
             let extrinsicSection = extrinsic.method.section;
@@ -117,7 +118,8 @@ export const indexingService = {
             } else args = extrinsic.method.args;
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
-        };
+        }
+        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -158,7 +160,7 @@ export const indexingService = {
         for (let index = 0; index < args.calls.length; index++) {
             const call = args.calls[index];
             await this.parseMethodAndSection(call.section , call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
-        };
+        }
     },
 
     async parseCouncilClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
@@ -220,7 +222,7 @@ export const indexingService = {
                 }
                 bountyRepository.insert(bounty);
             }
-        };
+        }
     },
 
     async parseCouncilPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -312,7 +314,7 @@ export const indexingService = {
             } else {
                 bountyRepository.insert(entry);
             }
-        };
+        }
     },
 
     async parseTreasuryProposeSpend(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -330,7 +332,7 @@ export const indexingService = {
                 entry.proposed_at = blockEntity.id;
                 treasureProposalRepository.update(entry);
             }
-        };
+        }
     },
 
     async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity): Promise<void> {
@@ -460,7 +462,7 @@ export const indexingService = {
                 const account = await accountRepository.getOrCreateAccount(address, chain.id);
                 councilorEntity.account_id = account.id;
                 await councilorRepository.insert(councilorEntity);
-            };
+            }
         }
 
         if (treasuryEvents) {
@@ -478,7 +480,7 @@ export const indexingService = {
                     treasuryProposal.chain_id = chain.id;
                     treasureProposalRepository.insert(treasuryProposal);
                 }
-            };
+            }
         }
     },
 
@@ -498,7 +500,7 @@ export const indexingService = {
                     chain_id: chain.id
                 };
                 bountyRepository.insert(bounty);
-            };
+            }
         }
     },
 
