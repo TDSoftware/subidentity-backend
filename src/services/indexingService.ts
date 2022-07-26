@@ -92,7 +92,8 @@ export const indexingService = {
         if (await blockRepository.existsByBlockHash(blockHash)) return;
         else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
 
-        extrinsics.forEach(async (ex: any, index: number) => {
+        for (let index = 0; index < extrinsics.length; index++){
+            const ex = extrinsics[index]
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
             let extrinsicMethod = extrinsic.method.method;
             let extrinsicSection = extrinsic.method.section;
@@ -115,8 +116,8 @@ export const indexingService = {
                 }
             } else args = extrinsic.method.args;
 
-            this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
-        });
+            await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+        };
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -145,7 +146,7 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIPS):
-                this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
+                await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.UTILITY):
                 if(extrinsicMethod === ExtrinsicMethod.BATCH) this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
@@ -154,12 +155,9 @@ export const indexingService = {
     },
 
     async parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
-        args.calls.map(async (arg: any) => {
-            const callArgs = arg.args;
-            const callMethod = arg.method;
-            const callSection = arg.section;
-            await this.parseMethodAndSection(callSection, callMethod, callArgs, extrinsicEvents, blockEvents, callArgs, blockEntity, extrinsicSigner);
-        });
+        for (let index = 0; index < args.calls.length; index++) {
+            await this.parseMethodAndSection(args.calls[index].method , args.calls[index].section, args.calls[index], extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+        };
     },
 
     async parseCouncilClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
@@ -189,7 +187,9 @@ export const indexingService = {
 
         const bountyEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Bounties);
 
-        bountyEvents.forEach(async (be: Record<string, AnyJson>) => {
+        // for loop bountyEvents 
+        for (let index = 0; index < bountyEvents.length; index++) {
+            const be = bountyEvents[index];
             const bountyEvent = JSON.parse(JSON.stringify(be));
             const bountyId = bountyEvent.data[0];
             const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
@@ -219,7 +219,7 @@ export const indexingService = {
                 }
                 bountyRepository.insert(bounty);
             }
-        });
+        };
     },
 
     async parseCouncilPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -286,7 +286,9 @@ export const indexingService = {
 
     async parseProposeBounty(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const bountiesProposedEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Bounties && e.method === EventMethod.BountyProposed);
-        bountiesProposedEvents.forEach(async (bpe: Record<string, AnyJson>) => {
+        // for loop bountiesProposedEvents
+        for (let index = 0; index < bountiesProposedEvents.length; index++) {
+            const bpe = bountiesProposedEvents[index];
             const bountyId = JSON.parse(JSON.stringify(bpe.data))[0];
             const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
             let entry: BountyEntity = <BountyEntity>{};
@@ -309,12 +311,14 @@ export const indexingService = {
             } else {
                 bountyRepository.insert(entry);
             }
-        });
+        };
     },
 
     async parseTreasuryProposeSpend(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const treasuryProposedEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Treasury && e.method === EventMethod.Proposed);
-        treasuryProposedEvents.forEach(async (tpe: Record<string, AnyJson>) => {
+        // for loop treasuryProposedEvents
+        for (let index = 0; index < treasuryProposedEvents.length; index++) {
+            const tpe = treasuryProposedEvents[index];
             const proposalId = JSON.parse(JSON.stringify(tpe.data))[0];
             const entryList = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             if (entryList) {
@@ -325,7 +329,7 @@ export const indexingService = {
                 entry.proposed_at = blockEntity.id;
                 treasureProposalRepository.update(entry);
             }
-        });
+        };
     },
 
     async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity): Promise<void> {
@@ -446,18 +450,22 @@ export const indexingService = {
             councilterm.from_block = blockEntity.id;
             const counciltermInsert = await counciltermRepository.insert(councilterm);
             const counciltermData = Array(newCounciltermEvent.data).flat().flat();
-            counciltermData.forEach(async (ctd: AnyJson) => {
+            // for loop for councilterm data
+            for (let i = 0; i < counciltermData.length; i++) {
+                const ctd = counciltermData[i];
                 const councilorEntity = <CouncilorEntity>{};
                 const address = String(Array(ctd).flat()[0]);
                 councilorEntity.councilterm_id = counciltermInsert.id;
                 const account = await accountRepository.getOrCreateAccount(address, chain.id);
                 councilorEntity.account_id = account.id;
                 await councilorRepository.insert(councilorEntity);
-            });
+            };
         }
 
         if (treasuryEvents) {
-            treasuryEvents.forEach(async (te: Record<string, AnyJson>) => {
+            // for loop for treasury events
+            for (let i = 0; i < treasuryEvents.length; i++) {
+                const te = treasuryEvents[i];
                 const treasuryEvent = JSON.parse(JSON.stringify(te));
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
                 const existingProposal = await treasureProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id);
@@ -469,7 +477,7 @@ export const indexingService = {
                     treasuryProposal.chain_id = chain.id;
                     treasureProposalRepository.insert(treasuryProposal);
                 }
-            });
+            };
         }
     },
 
@@ -480,7 +488,8 @@ export const indexingService = {
                 ev.method === EventMethod.BountyClaimed
         );
         if (claimedEvents) {
-            claimedEvents.forEach((ce: Record<string, AnyJson>) => {
+            for (let i = 0; i < claimedEvents.length; i++) {
+                const ce = claimedEvents[i];
                 const claimEventData = JSON.parse(JSON.stringify(ce.data));
                 const bounty = <BountyEntity>{
                     bounty_id: claimEventData[0],
@@ -488,7 +497,7 @@ export const indexingService = {
                     chain_id: chain.id
                 };
                 bountyRepository.insert(bounty);
-            });
+            };
         }
     },
 
@@ -600,7 +609,9 @@ export const indexingService = {
                     const insertedTipProposal = await tipProposalRepository.insert(tipProposal);
                     tip.tip_proposal_id = insertedTipProposal.id;
                 }
+
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+
                 tip.tipper = account.id;
                 tip.value = parseInt(args.tip_value);
                 tip.tipped_at = blockEntity.id;
