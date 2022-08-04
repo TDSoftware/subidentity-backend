@@ -11,6 +11,7 @@ class BountyRepository extends MySQLRepository<BountyEntity> {
         const query = `SELECT id FROM ${this.tableName} WHERE ${this.tableName}.bounty_id = ${bountyId} AND ${this.tableName}.chain_id = "${chainId}" `;
         return (await runSelectQuery<BountyEntity>(query))[0];
     }
+
 }
 
 export const bountyRepository = new BountyRepository();

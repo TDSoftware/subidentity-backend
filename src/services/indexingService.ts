@@ -69,10 +69,10 @@ export const indexingService = {
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
         console.log("Indexing start: " + new Date());
-        console.time("Batch finished. " + (from - to) + " blocks indexed in");
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
+        console.time("Batch finished. " + (from - to) + " blocks indexed in");
         const startHash = await api.rpc.chain.getBlockHash(from);
         indexingService.readBlock(startHash.toString(), from, to);
     },
@@ -716,9 +716,6 @@ export const indexingService = {
             const voteEntry = await referendumVoteRepository.getByVoterAndReferendumId(vote.voter, vote.referendum_id);
             if (voteEntry === undefined) {
                 await referendumVoteRepository.insert(vote);
-            }
-            else {
-                await referendumVoteRepository.update(vote);
             }
         }
     }
