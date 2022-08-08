@@ -18,6 +18,13 @@ class BlockRepository extends MySQLRepository<BlockEntity> {
         return amount > 0;
     }
 
+    // select all blocks where parent block (block with block number - 1) does not exists
+    async getMissingParentBlocks(): Promise<BlockEntity[]> {
+        const query = `SELECT * FROM ${this.tableName} WHERE NOT EXISTS (SELECT * FROM ${this.tableName} WHERE ${this.tableName}.number = ${this.tableName}.number - 1)`;
+        return await runSelectQuery<BlockEntity>(query);
+    }
+
+
 }
 
 export const blockRepository = new BlockRepository();

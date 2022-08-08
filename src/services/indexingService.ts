@@ -72,7 +72,6 @@ export const indexingService = {
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
-        console.time("Batch finished. " + (from - to) + " blocks indexed in");
         const startHash = await api.rpc.chain.getBlockHash(from);
         indexingService.readBlock(startHash.toString(), from, to);
     },
@@ -114,7 +113,6 @@ export const indexingService = {
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
         console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
-        if (block.block.header.number.toNumber() === to) console.timeEnd("Batch finished. " + (from - to) + " blocks indexed in");
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
