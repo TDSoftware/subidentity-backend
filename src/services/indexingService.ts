@@ -68,7 +68,7 @@ export const indexingService = {
     },
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
-        console.log("Indexing start: " + new Date());
+        console.log("Indexing start: " + new Date() + " from: " + from + " to: " + to);
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
@@ -77,7 +77,7 @@ export const indexingService = {
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string, from: number, to: number): Promise<void> {
-        console.time("BLOCK: " + block.block.header.number.toNumber());
+        // console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -112,7 +112,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -137,7 +137,7 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.DEMOCRACY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity, extrinsic);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIPS):
@@ -293,7 +293,7 @@ export const indexingService = {
 
             entry.bounty_id = bountyId;
             entry.description = String(args.description);
-            entry.value = Number(args[0]);
+            entry.value = parseFloat(args.value);
             entry.chain_id = chain.id;
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             entry.proposed_by = proposer.id;
@@ -315,7 +315,7 @@ export const indexingService = {
             const entryList = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             if (entryList) {
                 const entry = entryList;
-                entry.value = Number(args[0]);
+                entry.value = parseFloat(args.value);
                 const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 entry.proposed_by = proposer.id;
                 entry.proposed_at = blockEntity.id;
@@ -566,21 +566,23 @@ export const indexingService = {
             }
             case ExtrinsicMethod.CLOSETIP: {
                 const tipEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.TipClosed);
-                const motionHash = JSON.parse(JSON.stringify(tipEvent!.data))[0];
-                const tipProposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
-                if (!tipProposalEntry) {
-                    const tipProposal = <TipProposalEntity>{
-                        motion_hash: motionHash,
-                        chain_id: chain.id,
-                        status: TipProposalStatus.Closed,
-                        value: JSON.parse(JSON.stringify(tipEvent!.data))[2]
-                    };
-                    tipProposalRepository.insert(tipProposal);
-                } else if (tipProposalEntry) {
-                    tipProposalEntry.status = TipProposalStatus.Closed;
-                    tipProposalEntry.value = JSON.parse(JSON.stringify(tipEvent!.data))[2];
-                    tipProposalEntry.chain_id = chain.id;
-                    await tipProposalRepository.update(tipProposalEntry);
+                if (tipEvent) {
+                    const motionHash = JSON.parse(JSON.stringify(tipEvent!.data))[0];
+                    const tipProposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
+                    if (!tipProposalEntry) {
+                        const tipProposal = <TipProposalEntity>{
+                            motion_hash: motionHash,
+                            chain_id: chain.id,
+                            status: TipProposalStatus.Closed,
+                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2])
+                        };
+                        tipProposalRepository.insert(tipProposal);
+                    } else if (tipProposalEntry) {
+                        tipProposalEntry.status = TipProposalStatus.Closed;
+                        tipProposalEntry.value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2])
+                        tipProposalEntry.chain_id = chain.id;
+                        await tipProposalRepository.update(tipProposalEntry);
+                    }
                 }
                 break;
             }
@@ -603,7 +605,7 @@ export const indexingService = {
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
                 tip.tipper = account.id;
-                tip.value = parseInt(args.tip_value);
+                tip.value = parseFloat(args.tip_value);
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
                 break;
@@ -644,34 +646,37 @@ export const indexingService = {
     /*
        this function is called to parse the endorsals/ seconds for proposals
     */
-    async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
+    async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsic: any): Promise<void> {
+        //TODO something here is wrong, test
         const secondEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Seconded && e.section === EventSection.Democracy);
-        const endorsement = <EndorsementEntity>{};
-        const address = JSON.parse(JSON.stringify(secondEvent!.data))[0];
-        const proposal_index = JSON.parse(JSON.stringify(secondEvent!.data))[1];
-        endorsement.endorsed_at = blockEntity.id;
+        if (secondEvent) {
+            const endorsement = <EndorsementEntity>{};
+            const address = JSON.parse(JSON.stringify(secondEvent!.data))[0];
+            const proposal_index = JSON.parse(JSON.stringify(secondEvent!.data))[1];
+            endorsement.endorsed_at = blockEntity.id;
 
-        const account = await accountRepository.getOrCreateAccount(address, chain.id);
-        endorsement.endorser = account.id;
+            const account = await accountRepository.getOrCreateAccount(address, chain.id);
+            endorsement.endorser = account.id;
 
-        const proposal = await proposalRepository.getByProposalIndexAndChainId(proposal_index, chain.id);
-        if (proposal === undefined) {
-            const proposalEntity = <ProposalEntity>{
-                chain_id: chain.id,
-                proposal_index: proposal_index,
-                status: ProposalStatus.Proposed
-            };
-            const insertedProposal = await proposalRepository.insert(proposalEntity);
-            endorsement.proposal_id = insertedProposal.id;
-        } else {
-            endorsement.proposal_id = proposal.id;
-        }
+            const proposal = await proposalRepository.getByProposalIndexAndChainId(proposal_index, chain.id);
+            if (proposal === undefined) {
+                const proposalEntity = <ProposalEntity>{
+                    chain_id: chain.id,
+                    proposal_index: proposal_index,
+                    status: ProposalStatus.Proposed
+                };
+                const insertedProposal = await proposalRepository.insert(proposalEntity);
+                endorsement.proposal_id = insertedProposal.id;
+            } else {
+                endorsement.proposal_id = proposal.id;
+            }
 
-        const endorsementEntry = await endorsementRepository.getByProposalIdAndEndorser(endorsement.endorser, endorsement.proposal_id);
-        if (endorsementEntry === undefined) {
-            await endorsementRepository.insert(endorsement);
-        } else {
-            await endorsementRepository.update(endorsement);
+            const endorsementEntry = await endorsementRepository.getByProposalIdAndEndorser(endorsement.endorser, endorsement.proposal_id);
+            if (endorsementEntry === undefined) {
+                await endorsementRepository.insert(endorsement);
+            } else {
+                await endorsementRepository.update(endorsement);
+            }
         }
     },
 
@@ -685,7 +690,7 @@ export const indexingService = {
             const vote = <ReferendumVoteEntity>{
                 referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
                 vote: voteDetails.vote.vote === Vote.Aye,
-                locked_value: parseInt(voteDetails.balance),
+                locked_value: parseFloat(voteDetails.balance),
                 voted_at: blockEntity.id
             };
 

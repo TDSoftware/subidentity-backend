@@ -51,8 +51,9 @@ export const executionManager = {
 
             let counter = 0;
 
+            //TODO proper cluster disconnect handling
             cluster.on('exit', (worker, code, signal) => {
-                cluster.fork()
+                console.log("worker " + worker.id + " died");
             });
 
             cluster.on('message', (worker, msg, handle) => {
@@ -61,12 +62,11 @@ export const executionManager = {
                     worker.send({ topic: COUNTER, value: counter - 1 });
                 }
             });
-
+            console.log("Indexing will start on " + cpuCores + " cores.");
         } else {
             function incrementCounter() {
                 process.send!({ topic: INCREMENT });
             }
-            // A dummy timeout to call the incrementCounter function
             setTimeout(incrementCounter, 1000 * cluster.worker!.id);
             process.on('message', (msg: any) => {
                 if(msg.value <= slots.length){
