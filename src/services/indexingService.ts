@@ -115,7 +115,7 @@ export const indexingService = {
         // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
-    async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string) {
         switch (extrinsicSection) {
             case (ExtrinsicSection.COUNCIL):
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
@@ -141,7 +141,7 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIPS):
-                await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
+                this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.UTILITY):
                 if(extrinsicMethod === ExtrinsicMethod.BATCH) this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
@@ -149,10 +149,10 @@ export const indexingService = {
         }
     },
 
-    async parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string) {
         for (let index = 0; index < args.calls.length; index++) {
             const call = args.calls[index];
-            await this.parseMethodAndSection(call.section , call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
+            this.parseMethodAndSection(call.section , call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
         }
     },
 
@@ -486,7 +486,7 @@ export const indexingService = {
                     status: BountyStatus.Claimed,
                     chain_id: chain.id
                 };
-                bountyRepository.insert(bounty);
+                await bountyRepository.insert(bounty);
             }
         }
     },

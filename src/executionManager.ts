@@ -4,6 +4,9 @@ config();
 import { indexingService } from './services/indexingService';
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import cluster from 'cluster';
+import minimist from "minimist";
+
+const args = minimist(process.argv.slice(2));
 
 const INCREMENT = 'INCREMENT';
 const COUNTER = 'COUNTER';
@@ -76,5 +79,6 @@ export const executionManager = {
         }
     }
 }
-executionManager.initiateIndexing(cpuCores, "wss://kusama-rpc.polkadot.io");
+
+executionManager.initiateIndexing(cpuCores, args.endpoint);
 
