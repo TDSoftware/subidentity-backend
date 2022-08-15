@@ -1,84 +1,58 @@
 import { config } from "dotenv";
 config();
 
-import { indexingService } from './services/indexingService';
-import { ApiPromise, WsProvider } from "@polkadot/api";
-import cluster from 'cluster';
+import { clusterService } from './services/clusterService';
 import minimist from "minimist";
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import { ChainEntity } from "./types/entities/ChainEntity";
+import { blockRepository } from './repositories/blockRepository';
+import { chainService } from "./services/chainService";
 
+let chain: ChainEntity;
 const args = minimist(process.argv.slice(2));
-
-const INCREMENT = 'INCREMENT';
-const COUNTER = 'COUNTER';
-const cpuCores = require('os').cpus().length;
 
 export const executionManager = {
 
-    async initiateIndexing(slotCount: number, endpoint: string) {
+    async createSlots(endpoint: string, slotCount: number): Promise<number[][]> {
+        chain = chain = await chainService.getChainEntityByWsProvider(endpoint);
         const wsProvider = new WsProvider(endpoint);
         const api = await ApiPromise.create({ provider: wsProvider });
-
-        const latestBlock = await api.rpc.chain.getHeader().then(header => {
-            return header.number.toNumber();
-        }).catch(err => {
-            console.log(err);
-        }).finally(() => {
-            api.disconnect();
-        });
-
-        const slots = this.createSlots(0, Number(latestBlock), slotCount);
-        this.indexSlots(slots, endpoint)
-    },
-
-    createSlots(from: number, to: number, slotCount: number): number[][] {
-        const span = to - from;
-        const slotSpan = span / slotCount;
+        const latestBlock = await api.rpc.chain.getHeader().then(header => header.number.toNumber());
         const slots = [];
-        const slotsWithNext = [];
-        for (let i = 0; i < slotCount; i++) {
-            const slot = Math.round(from + (slotSpan * i));
-            slots.push(slot);
-        }
-        for (let i = 0; i < slots.length; i++) {
-            const nextSlot = i + 1 < slots.length ? slots[i + 1] : to;
-            slotsWithNext.push([slots[i], nextSlot - 1]);
-        }
+        let slotsWithNext: number[][] = [];
+        const blockCount = await blockRepository.getBlockCount(chain.id);
+
+        if(blockCount === 0) {
+            console.log("No blocks found. Calculating slots...");
+            const slotSpan = latestBlock / slotCount;
+            for (let i = 0; i < slotCount; i++) {
+                const slot = Math.round(0 + (slotSpan * i));
+                slots.push(slot);
+            }
+            for (let i = 0; i < slots.length; i++) {
+                const nextSlot = i + 1 < slots.length ? slots[i + 1] : latestBlock;
+                slotsWithNext.push([slots[i], nextSlot - 1]);
+            }
+        } else if(blockCount > 0) {
+            slotsWithNext = await this.recalculateSlots();
+        }   
         return slotsWithNext;
     },
 
-    indexSlots(slots: number[][], endpoint: string) {
-        if (cluster.isPrimary) {
-            for (let i = 0; i < cpuCores; i++) {
-                cluster.fork();
-            }
-
-            let counter = 0;
-
-            //TODO proper cluster disconnect handling
-            cluster.on('exit', (worker, code, signal) => {
-                console.log("worker " + worker.id + " died");
-            });
-
-            cluster.on('message', (worker, msg, handle) => {
-                if (msg.topic === INCREMENT) {
-                    counter++
-                    worker.send({ topic: COUNTER, value: counter - 1 });
-                }
-            });
-            console.log("Indexing will start on " + cpuCores + " cores.");
-        } else {
-            function incrementCounter() {
-                process.send!({ topic: INCREMENT });
-            }
-            setTimeout(incrementCounter, 1000 * cluster.worker!.id);
-            process.on('message', (msg: any) => {
-                if(msg.value <= slots.length){
-                    indexingService.indexChain(endpoint, slots[msg.value][1], slots[msg.value][0]);
-                }
-            });
+    async recalculateSlots(): Promise<number[][]> {
+        console.log('Continuing indexing, recalculating slots...');
+        const slotsWithNext = [];
+        // we are first getting the edge blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
+        const edgeBlocks = await blockRepository.getOrphanBlocks(chain.id);
+        for(let i = 0; i < edgeBlocks.length; i++) {
+            const firstBlockWithLowerNumber = await blockRepository.getFirstBlockWithLowerNumber(edgeBlocks[i].number, chain.id);
+            const toNum: number = firstBlockWithLowerNumber === undefined ? 0 : firstBlockWithLowerNumber.number + 1;
+            slotsWithNext.push([toNum, edgeBlocks[i].number]);
         }
-    }
+        return slotsWithNext;
+    },
 }
 
-executionManager.initiateIndexing(cpuCores, args.endpoint);
+clusterService.indexSlots(args.endpoint)
+
 
