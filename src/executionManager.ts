@@ -54,5 +54,3 @@ export const executionManager = {
 }
 
 clusterService.indexSlots(args.endpoint)
-
-

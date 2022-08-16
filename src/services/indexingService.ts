@@ -77,7 +77,7 @@ export const indexingService = {
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string, from: number, to: number): Promise<void> {
-        // console.time("BLOCK: " + block.block.header.number.toNumber());
+        console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -112,7 +112,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string) {
@@ -183,7 +183,6 @@ export const indexingService = {
 
         const bountyEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Bounties);
 
-        // for loop bountyEvents 
         for (let index = 0; index < bountyEvents.length; index++) {
             const be = bountyEvents[index];
             const bountyEvent = JSON.parse(JSON.stringify(be));
@@ -647,7 +646,6 @@ export const indexingService = {
        this function is called to parse the endorsals/ seconds for proposals
     */
     async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsic: any): Promise<void> {
-        //TODO something here is wrong, test
         const secondEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Seconded && e.section === EventSection.Democracy);
         if (secondEvent) {
             const endorsement = <EndorsementEntity>{};

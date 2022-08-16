@@ -12,7 +12,7 @@ export const clusterService = {
     async indexSlots(endpoint: string) {
         let slots: number[][] = [];
         if (cluster.isPrimary) {
-            slots = await executionManager.createSlots(endpoint, cpuCores)
+            slots = await executionManager.createSlots(endpoint, cpuCores);
 
             let counter = 0;
             for (let i = 0; i < slots.length; i++) {
