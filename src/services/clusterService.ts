@@ -1,14 +1,11 @@
 import { executionManager } from './../executionManager';
 import { indexingService } from './indexingService';
 import cluster from 'cluster';
-// import node schedule
 
 const INCREMENT = 'INCREMENT';
 const COUNTER = 'COUNTER';
 const SLOT = 'SLOT';
 let cpuCores = require('os').cpus().length;
-
-//TODO schedule a disconnect every 30 minutes to prevent the process from getting stuck
 
 export const clusterService = {
 
