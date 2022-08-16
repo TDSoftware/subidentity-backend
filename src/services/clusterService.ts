@@ -3,7 +3,6 @@ import { indexingService } from './indexingService';
 import cluster from 'cluster';
 // import node schedule
 
-const schedule = require('node-schedule');
 const INCREMENT = 'INCREMENT';
 const COUNTER = 'COUNTER';
 const SLOT = 'SLOT';
@@ -25,6 +24,7 @@ export const clusterService = {
 
             cluster.on('exit', (worker) => {
                 console.log("Worker " + worker.id + " died. Restarting...");
+                counter = 0;
                 cluster.disconnect();
                 this.indexSlots(endpoint);
             });
@@ -45,7 +45,7 @@ export const clusterService = {
             function retrieveSlots() {
                 process.send!({ topic: SLOT});
             }
-            setTimeout(retrieveSlots, 1000 * cluster.worker!.id);
+            setTimeout(retrieveSlots, 100 * cluster.worker!.id);
             process.on('message', (msg: any) => {
                 if (msg.topic === SLOT) {
                     slots = msg.value;
@@ -56,7 +56,7 @@ export const clusterService = {
             function incrementCounter() {
                 process.send!({ topic: INCREMENT });
             }
-            setTimeout(incrementCounter, 1000 * cluster.worker!.id);
+            setTimeout(incrementCounter, 100 * cluster.worker!.id);
             process.on('message', (msg: any) => {
                 if (msg.topic === COUNTER) {
                     if (msg.value <= slots.length) {

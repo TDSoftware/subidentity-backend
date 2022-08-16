@@ -42,12 +42,12 @@ export const executionManager = {
     async recalculateSlots(): Promise<number[][]> {
         console.log('Continuing indexing, recalculating slots...');
         const slotsWithNext = [];
-        // we are first getting the edge blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
-        const edgeBlocks = await blockRepository.getOrphanBlocks(chain.id);
-        for(let i = 0; i < edgeBlocks.length; i++) {
-            const firstBlockWithLowerNumber = await blockRepository.getFirstBlockWithLowerNumber(edgeBlocks[i].number, chain.id);
+        // we are first getting the orphan blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
+        const orphanBlocks = await blockRepository.getOrphanBlocks(chain.id);
+        for(let i = 0; i < orphanBlocks.length; i++) {
+            const firstBlockWithLowerNumber = await blockRepository.getFirstBlockWithLowerNumber(orphanBlocks[i].number, chain.id);
             const toNum: number = firstBlockWithLowerNumber === undefined ? 0 : firstBlockWithLowerNumber.number + 1;
-            slotsWithNext.push([toNum, edgeBlocks[i].number]);
+            slotsWithNext.push([toNum, orphanBlocks[i].number]);
         }
         return slotsWithNext;
     },
