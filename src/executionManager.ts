@@ -1,12 +1,13 @@
 import { config } from "dotenv";
 config();
 
-import { clusterService } from './services/clusterService';
+import { clusterService } from "./services/clusterService";
 import minimist from "minimist";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { ChainEntity } from "./types/entities/ChainEntity";
-import { blockRepository } from './repositories/blockRepository';
+import { blockRepository } from "./repositories/blockRepository";
 import { chainService } from "./services/chainService";
+import { Header } from "@polkadot/types/interfaces";
 
 let chain: ChainEntity;
 const args = minimist(process.argv.slice(2));
@@ -17,7 +18,7 @@ export const executionManager = {
         chain = chain = await chainService.getChainEntityByWsProvider(endpoint);
         const wsProvider = new WsProvider(endpoint);
         const api = await ApiPromise.create({ provider: wsProvider });
-        const latestBlock = await api.rpc.chain.getHeader().then(header => header.number.toNumber());
+        const latestBlock = await api.rpc.chain.getHeader().then((header: Header) => header.number.toNumber());
         const slots = [];
         let slotsWithNext: number[][] = [];
         const blockCount = await blockRepository.getBlockCount(chain.id);
@@ -40,7 +41,7 @@ export const executionManager = {
     },
 
     async recalculateSlots(): Promise<number[][]> {
-        console.log('Continuing indexing, recalculating slots...');
+        console.log("Continuing indexing, recalculating slots...");
         const slotsWithNext = [];
         // we are first getting the orphan blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
         const orphanBlocks = await blockRepository.getOrphanBlocks(chain.id);
@@ -50,8 +51,8 @@ export const executionManager = {
             slotsWithNext.push([toNum, orphanBlocks[i].number]);
         }
         return slotsWithNext;
-    },
-}
+    }
+};
 
 // for indexing
-clusterService.indexSlots(args.endpoint)
+clusterService.indexSlots(args.endpoint);

@@ -115,7 +115,7 @@ export const indexingService = {
         console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
-    parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string) {
+    parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): void {
         switch (extrinsicSection) {
             case (ExtrinsicSection.COUNCIL):
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
@@ -149,7 +149,7 @@ export const indexingService = {
         }
     },
 
-    parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string) {
+    parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): void {
         for (let index = 0; index < args.calls.length; index++) {
             const call = args.calls[index];
             this.parseMethodAndSection(call.section, call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
@@ -292,7 +292,7 @@ export const indexingService = {
 
             entry.bounty_id = bountyId;
             entry.description = String(args.description);
-            entry.value = parseFloat(args.value);
+            entry.value = parseFloat(args.value.replace(/,/g, ""));
             entry.chain_id = chain.id;
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             entry.proposed_by = proposer.id;
@@ -314,7 +314,7 @@ export const indexingService = {
             const entryList = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             if (entryList) {
                 const entry = entryList;
-                entry.value = parseFloat(args.value);
+                entry.value = parseFloat(args.value.replace(/,/g, ""));
                 const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 entry.proposed_by = proposer.id;
                 entry.proposed_at = blockEntity.id;
@@ -573,12 +573,12 @@ export const indexingService = {
                             motion_hash: motionHash,
                             chain_id: chain.id,
                             status: TipProposalStatus.Closed,
-                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2])
+                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, ""))
                         };
                         tipProposalRepository.insert(tipProposal);
                     } else if (tipProposalEntry) {
                         tipProposalEntry.status = TipProposalStatus.Closed;
-                        tipProposalEntry.value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2])
+                        tipProposalEntry.value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, ""));
                         tipProposalEntry.chain_id = chain.id;
                         await tipProposalRepository.update(tipProposalEntry);
                     }
@@ -604,7 +604,7 @@ export const indexingService = {
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
                 tip.tipper = account.id;
-                tip.value = parseFloat(args.tip_value);
+                tip.value = parseFloat(args.tip_value.replace(/,/g, ""));
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
                 break;
@@ -688,7 +688,7 @@ export const indexingService = {
             const vote = <ReferendumVoteEntity>{
                 referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
                 vote: voteDetails.vote.vote === Vote.Aye,
-                locked_value: parseFloat(voteDetails.balance),
+                locked_value: parseFloat(voteDetails.balance.replace(/,/g, "")),
                 voted_at: blockEntity.id
             };
 

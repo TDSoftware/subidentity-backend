@@ -1,15 +1,24 @@
-import { executionManager } from './../executionManager';
-import { indexingService } from './indexingService';
-import cluster from 'cluster';
+import { executionManager } from "./../executionManager";
+import { indexingService } from "./indexingService";
+import cluster from "cluster";
+import os from "os";
 
-const INCREMENT = 'INCREMENT';
-const COUNTER = 'COUNTER';
-const SLOT = 'SLOT';
-let cpuCores = require('os').cpus().length;
+const INCREMENT = "INCREMENT";
+const COUNTER = "COUNTER";
+const SLOT = "SLOT";
+const cpuCores = os.cpus().length;
 
 export const clusterService = {
+
+    retrieveSlots(): void{
+        process.send!({ topic: SLOT});
+    },
+
+    incrementCounter(): void {
+        process.send!({ topic: INCREMENT });
+    },
     
-    async indexSlots(endpoint: string) {
+    async indexSlots(endpoint: string): Promise<void> {
         let slots: number[][] = [];
         if (cluster.isPrimary) {
             slots = await executionManager.createSlots(endpoint, cpuCores);
@@ -19,13 +28,13 @@ export const clusterService = {
                 cluster.fork();
             }
 
-            cluster.on('exit', (worker) => {
+            cluster.on("exit", (worker: any) => {
                 console.log("Worker " + worker.id + " died. Restarting...");
             });
 
-            cluster.on('message', (worker, msg) => {
+            cluster.on("message", (worker: any, msg: any) => {
                 if (msg.topic === INCREMENT) {
-                    counter++
+                    counter++;
                     worker.send({ topic: COUNTER, value: counter - 1 });
                 }
                 if (msg.topic === SLOT) {
@@ -33,25 +42,19 @@ export const clusterService = {
                 }
             });
 
-            console.log("Indexing will start on " + slots.length + " cores.");
+            console.log("Indexing will commence in " + slots.length + " batches.");
         } else if(cluster.isWorker){
             // retrieve slots
-            function retrieveSlots() {
-                process.send!({ topic: SLOT});
-            }
-            setTimeout(retrieveSlots, 100 * cluster.worker!.id);
-            process.on('message', (msg: any) => {
+            setTimeout(this.retrieveSlots, 100 * cluster.worker!.id);
+            process.on("message", (msg: any) => {
                 if (msg.topic === SLOT) {
                     slots = msg.value;
                 }
             });
 
             // retrieve counter to know which slot the worker should use
-            function incrementCounter() {
-                process.send!({ topic: INCREMENT });
-            }
-            setTimeout(incrementCounter, 100 * cluster.worker!.id);
-            process.on('message', (msg: any) => {
+            setTimeout(this.incrementCounter, 100 * cluster.worker!.id);
+            process.on("message", (msg: any) => {
                 if (msg.topic === COUNTER) {
                     if (msg.value <= slots.length) {
                         indexingService.indexChain(endpoint, slots[msg.value][1], slots[msg.value][0]);
@@ -60,4 +63,4 @@ export const clusterService = {
             });
         }
     }
-}
+};

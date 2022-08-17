@@ -2,22 +2,23 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { ChainEntity } from "../types/entities/ChainEntity";
 import { chainService } from "./chainService";
 import { indexingService } from "./indexingService";
+import { Header } from "@polkadot/types/interfaces";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
 let api: ApiPromise;
 let blockHashes: number[] = [];
-let batchCount = 25;
+const batchCount = 25;
 
 export const listenerService = {
-    async parseNewBlocks(wsProviderAddress: string) {
+    async parseNewBlocks(wsProviderAddress: string): Promise<void> {
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
         
-        await api.rpc.chain.subscribeAllHeads(async (header) => {
+        await api.rpc.chain.subscribeAllHeads(async (header: Header) => {
             const blockNumber = header.number.toNumber();
-            if(!blockHashes.find(blockNum => blockNum === blockNumber)) {
+            if(!blockHashes.find((blockNum: number) => blockNum === blockNumber)) {
                 blockHashes.push(blockNumber);
                 console.log("New Block: " + blockNumber + " found! " + (25 - blockHashes.length) + " blocks left until batch will be indexed.");
             }
@@ -28,4 +29,4 @@ export const listenerService = {
             }
         });
     }
-}
+};
