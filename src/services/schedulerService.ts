@@ -1,14 +1,12 @@
-
-import { chainRepository } from "../repositories/chainRepository";
-import { identityRepository } from "../repositories/identityRepository";
-import { accountRepository } from "../repositories/accountRepository";
-import { getCompleteIdentities } from "@npmjs_tdsoftware/subidentity";
-import { ChainsWsProvider } from "../types/dtos/ChainsWsProvider";
-import { judgementRepository } from "../repositories/judgementRepository";
-import { identityService } from "./identityService";
 import { ChainStatus } from "../types/enums/ChainStatus";
+import { ChainsWsProvider } from "../types/dtos/ChainsWsProvider";
+import { accountRepository } from "../repositories/accountRepository";
+import { chainRepository } from "../repositories/chainRepository";
 import { chainService } from "./chainService";
-
+import { getCompleteIdentities } from "@npmjs_tdsoftware/subidentity";
+import { identityRepository } from "../repositories/identityRepository";
+import { identityService } from "./identityService";
+import { judgementRepository } from "../repositories/judgementRepository";
 
 export const schedulerService = {
     async fetchIdentities(): Promise<void> {

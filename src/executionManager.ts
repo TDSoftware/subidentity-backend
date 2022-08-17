@@ -1,13 +1,13 @@
 import { config } from "dotenv";
 config();
 
-import { clusterService } from "./services/clusterService";
 import minimist from "minimist";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { ChainEntity } from "./types/entities/ChainEntity";
+import { Header } from "@polkadot/types/interfaces";
 import { blockRepository } from "./repositories/blockRepository";
 import { chainService } from "./services/chainService";
-import { Header } from "@polkadot/types/interfaces";
+import { clusterService } from "./services/clusterService";
 
 let chain: ChainEntity;
 const args = minimist(process.argv.slice(2));

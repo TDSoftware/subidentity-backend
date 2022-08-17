@@ -1,8 +1,8 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { ChainEntity } from "../types/entities/ChainEntity";
+import { Header } from "@polkadot/types/interfaces";
 import { chainService } from "./chainService";
 import { indexingService } from "./indexingService";
-import { Header } from "@polkadot/types/interfaces";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;

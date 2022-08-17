@@ -1,51 +1,51 @@
-import { EndorsementEntity } from "./../types/entities/EndorsementEntity";
-import { TipProposalStatus } from "./../types/enums/TipProposalStatus";
+import { AnyJson } from "@polkadot/types-codec/types";
 import { ApiPromise, WsProvider } from "@polkadot/api";
-import { SignedBlock } from "@polkadot/types/interfaces";
-import { blockRepository } from "../repositories/blockRepository";
+import { BlockEntity } from "../types/entities/BlockEntity";
+import { BountyEntity } from "../types/entities/BountyEntity";
+import { BountyMethod } from "../types/enums/BountyMethod";
+import { BountyStatus } from "../types/enums/BountyStatus";
 import { ChainEntity } from "../types/entities/ChainEntity";
 import { CouncilMotionEntity } from "../types/entities/CouncilMotionEntity";
-import { blockMapper } from "./mapper/blockMapper";
-import { chainService } from "./chainService";
-import { BountyEntity } from "../types/entities/BountyEntity";
-import { ExtrinsicMethod } from "../types/enums/ExtrinsicMethod";
-import { ExtrinsicSection } from "../types/enums/ExtrinsicSection";
-import { bountyRepository } from "../repositories/bountyRepository";
-import { councilMotionRepository } from "../repositories/councilMotionRepository";
-import { TreasuryProposalEntity } from "../types/entities/TreasuryProposalEntity";
-import { councilMotionVoteRepository } from "../repositories/councilMotionVoteRepository";
-import { CouncilMotionVoteEntity } from "../types/entities/CouncilMotionVoteEntity";
-import { treasureProposalRepository } from "../repositories/treasuryProposalRepository";
-import { accountRepository } from "../repositories/accountRepository";
 import { CouncilMotionStatus } from "../types/enums/CouncilMotionStatus";
-import { BountyStatus } from "../types/enums/BountyStatus";
-import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
-import { EventSection } from "../types/enums/EventSection";
-import { EventMethod } from "../types/enums/EventMethod";
-import { BlockEntity } from "../types/entities/BlockEntity";
-import { CounciltermEntity } from "../types/entities/CounciltermEntity";
-import { Vec } from "@polkadot/types";
-import { FrameSystemEventRecord } from "@polkadot/types/lookup";
-import { AnyJson } from "@polkadot/types-codec/types";
-import { counciltermRepository } from "../repositories/counciltermRepository";
+import { CouncilMotionVoteEntity } from "../types/entities/CouncilMotionVoteEntity";
 import { CouncilorEntity } from "../types/entities/CouncilorEntity";
-import { councilorRepository } from "../repositories/councilorRepository";
-import { TipProposalEntity } from "../types/entities/TipProposalEntity";
-import { tipProposalRepository } from "../repositories/tipProposalRepository";
-import { proposalRepository } from "../repositories/proposalRepository";
+import { CounciltermEntity } from "../types/entities/CounciltermEntity";
+import { EndorsementEntity } from "./../types/entities/EndorsementEntity";
+import { EventMethod } from "../types/enums/EventMethod";
+import { EventSection } from "../types/enums/EventSection";
+import { ExtrinsicMethod } from "../types/enums/ExtrinsicMethod";
+import { ExtrinsicPhase } from "../types/enums/ExtrinsicPhase";
+import { ExtrinsicSection } from "../types/enums/ExtrinsicSection";
+import { FrameSystemEventRecord } from "@polkadot/types/lookup";
 import { ProposalEntity } from "../types/entities/ProposalEntity";
 import { ProposalStatus } from "../types/enums/ProposalStatus";
-import { TipEntity } from "../types/entities/TipEntity";
-import { tipRepository } from "../repositories/tipRepository";
-import { ExtrinsicPhase } from "../types/enums/ExtrinsicPhase";
-import { endorsementRepository } from "../repositories/endorsementRepository";
-import { ReferendumVoteEntity } from "../types/entities/ReferendumVoteEntity";
-import { referendumVoteRepository } from "../repositories/referendumVoteRepository";
-import { referendumRepository } from "../repositories/referendumRepository";
 import { ReferendumEntity } from "../types/entities/ReferendumEntity";
 import { ReferendumStatus } from "../types/enums/ReferendumStatus";
+import { ReferendumVoteEntity } from "../types/entities/ReferendumVoteEntity";
+import { SignedBlock } from "@polkadot/types/interfaces";
+import { TipEntity } from "../types/entities/TipEntity";
+import { TipProposalEntity } from "../types/entities/TipProposalEntity";
+import { TipProposalStatus } from "./../types/enums/TipProposalStatus";
+import { TreasuryProposalEntity } from "../types/entities/TreasuryProposalEntity";
+import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
+import { Vec } from "@polkadot/types";
 import { Vote } from "../types/enums/Vote";
-import { BountyMethod } from "../types/enums/BountyMethod";
+import { accountRepository } from "../repositories/accountRepository";
+import { blockMapper } from "./mapper/blockMapper";
+import { blockRepository } from "../repositories/blockRepository";
+import { bountyRepository } from "../repositories/bountyRepository";
+import { chainService } from "./chainService";
+import { councilMotionRepository } from "../repositories/councilMotionRepository";
+import { councilMotionVoteRepository } from "../repositories/councilMotionVoteRepository";
+import { councilorRepository } from "../repositories/councilorRepository";
+import { counciltermRepository } from "../repositories/counciltermRepository";
+import { endorsementRepository } from "../repositories/endorsementRepository";
+import { proposalRepository } from "../repositories/proposalRepository";
+import { referendumRepository } from "../repositories/referendumRepository";
+import { referendumVoteRepository } from "../repositories/referendumVoteRepository";
+import { tipProposalRepository } from "../repositories/tipProposalRepository";
+import { tipRepository } from "../repositories/tipRepository";
+import { treasureProposalRepository } from "../repositories/treasuryProposalRepository";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -139,6 +139,7 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity, extrinsic);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity, extrinsic, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIPS):
                 this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
@@ -638,6 +639,34 @@ export const indexingService = {
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 proposal.proposed_by = account.id;
                 await proposalRepository.update(proposal);
+            }
+        }
+    },
+
+    /*
+        this function decodes the encoded_proposal and gets the call for a proposal
+    */
+    async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsic: any, extrinsicSigner: string): Promise<void> {
+        const encoded_proposal = args.encoded_proposal
+        const decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
+        const preImageMethod = decoded_proposal.method;
+        const preImageSection = decoded_proposal.section;
+
+        const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
+        if (preImageEvent) {
+            const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
+            const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
+            const proposalEntity = <ProposalEntity>{
+                chain_id: chain.id,
+                motion_hash: proposal_hash,
+                section: preImageSection,
+                method: preImageMethod,
+                proposed_by: account.id
+            }
+            if(!await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id)){
+                await proposalRepository.insert(proposalEntity);
+            } else {
+                await proposalRepository.update(proposalEntity);
             }
         }
     },
