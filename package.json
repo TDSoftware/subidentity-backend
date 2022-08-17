@@ -17,6 +17,7 @@
     "minimist": "^1.2.6",
     "mysql": "^2.18.1",
     "node-cron": "^3.0.0",
+    "node-schedule": "^2.1.0",
     "tv4": "^1.3.0"
   },
   "devDependencies": {
@@ -42,6 +43,8 @@
   },
   "scripts": {
     "dev-api": "nodemon src/api.ts",
+    "dev-indexer": "nodemon src/indexer.ts --from= --to=",
+    "dev-exec": "nodemon src/executionManager.ts --endpoint= & nodemon src/listener.ts --endpoint=",
     "dev-scheduler": "nodemon src/scheduler.ts",
     "dev": "npm run dev-api",
     "start-api": "npm run build && node dist/src/api.js",
