@@ -15,12 +15,13 @@ export const listenerService = {
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
-        
+
+        // TODO allHeads for finalizedHeads?
         await api.rpc.chain.subscribeAllHeads(async (header: Header) => {
             const blockNumber = header.number.toNumber();
             if(!blockHashes.find((blockNum: number) => blockNum === blockNumber)) {
                 blockHashes.push(blockNumber);
-                console.log("New Block: " + blockNumber + " found! " + (25 - blockHashes.length) + " blocks left until batch will be indexed.");
+                console.log("New Block: " + blockNumber + " found! " + (batchCount - blockHashes.length) + " blocks left until batch will be indexed.");
             }
             // if we have x blocks, we index them
             if(blockHashes.length === batchCount) {
