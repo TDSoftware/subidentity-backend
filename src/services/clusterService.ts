@@ -8,7 +8,7 @@ const SLOT = 'SLOT';
 let cpuCores = require('os').cpus().length;
 
 export const clusterService = {
-
+    
     async indexSlots(endpoint: string) {
         let slots: number[][] = [];
         if (cluster.isPrimary) {
@@ -21,9 +21,6 @@ export const clusterService = {
 
             cluster.on('exit', (worker) => {
                 console.log("Worker " + worker.id + " died. Restarting...");
-                counter = 0;
-                cluster.disconnect();
-                this.indexSlots(endpoint);
             });
 
             cluster.on('message', (worker, msg) => {

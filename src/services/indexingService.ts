@@ -58,13 +58,13 @@ export const indexingService = {
         if (block.block.header.number.toNumber() >= to) indexingService.readBlock(block.block.header.parentHash.toString(), from, to);
         else {
             console.log(new Date());
-            process.exit(0);
+            return;
         }
-        indexingService.parseBlock(block, blockHash, from, to);
+        indexingService.parseBlock(block, blockHash);
     },
 
-    async parseBlock(block: SignedBlock, blockHash: string, from: number, to: number): Promise<void> {
-        await indexingService.parseExtrinsic(block, blockHash, from, to);
+    async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
+        await indexingService.parseExtrinsic(block, blockHash);
     },
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
@@ -76,7 +76,7 @@ export const indexingService = {
         indexingService.readBlock(startHash.toString(), from, to);
     },
 
-    async parseExtrinsic(block: SignedBlock, blockHash: string, from: number, to: number): Promise<void> {
+    async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
@@ -86,7 +86,7 @@ export const indexingService = {
         if (await blockRepository.existsByBlockHash(blockHash)) return;
         else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
 
-        for (let index = 0; index < extrinsics.length; index++){
+        for (let index = 0; index < extrinsics.length; index++) {
             const ex = extrinsics[index];
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
             let extrinsicMethod = extrinsic.method.method;
@@ -110,12 +110,12 @@ export const indexingService = {
                 }
             } else args = extrinsic.method.args;
 
-            await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+            this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
         console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
-    parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord> ,args: any, blockEntity: BlockEntity, extrinsicSigner: string) {
+    parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string) {
         switch (extrinsicSection) {
             case (ExtrinsicSection.COUNCIL):
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
@@ -144,7 +144,7 @@ export const indexingService = {
                 this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.UTILITY):
-                if(extrinsicMethod === ExtrinsicMethod.BATCH) this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.BATCH) this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
                 break;
         }
     },
@@ -152,7 +152,7 @@ export const indexingService = {
     parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string) {
         for (let index = 0; index < args.calls.length; index++) {
             const call = args.calls[index];
-            this.parseMethodAndSection(call.section , call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
+            this.parseMethodAndSection(call.section, call.method, extrinsic, extrinsicEvents, blockEvents, call.args, blockEntity, extrinsicSigner);
         }
     },
 
