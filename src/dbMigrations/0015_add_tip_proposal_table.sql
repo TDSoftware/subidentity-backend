@@ -9,7 +9,7 @@ CREATE TABLE tip_proposal (
     FOREIGN KEY(finder) REFERENCES account(id),
     reason VARCHAR(255),
     status VARCHAR(255),
-    value INT(11) UNSIGNED,
+    value BIGINT UNSIGNED,
     proposed_at BIGINT UNSIGNED,
     FOREIGN KEY(proposed_at) REFERENCES block(id)
 )
