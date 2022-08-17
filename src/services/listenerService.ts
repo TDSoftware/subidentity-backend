@@ -1,7 +1,6 @@
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { ChainEntity } from "../types/entities/ChainEntity";
 import { chainService } from "./chainService";
-import { SignedBlock } from "@polkadot/types/interfaces";
 import { indexingService } from "./indexingService";
 
 let chain: ChainEntity;
@@ -18,8 +17,10 @@ export const listenerService = {
         
         await api.rpc.chain.subscribeAllHeads(async (header) => {
             const blockNumber = header.number.toNumber();
-            blockHashes.push(blockNumber)
-            console.log("New Block: " + blockNumber + " found! " + (25 - blockHashes.length) + " blocks left until batch is complete.");
+            if(!blockHashes.find(blockNum => blockNum === blockNumber)) {
+                blockHashes.push(blockNumber);
+                console.log("New Block: " + blockNumber + " found! " + (25 - blockHashes.length) + " blocks left until batch will be indexed.");
+            }
             // if we have x blocks, we index them
             if(blockHashes.length === batchCount) {
                 indexingService.indexChain(wsProviderAddress, blockHashes[blockHashes.length - 1], blockHashes[0]);
