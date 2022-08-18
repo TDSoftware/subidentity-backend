@@ -77,7 +77,7 @@ export const indexingService = {
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
-        console.time("BLOCK: " + block.block.header.number.toNumber());
+        // console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -110,39 +110,39 @@ export const indexingService = {
                 }
             } else args = extrinsic.method.args;
 
-            this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+            await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
-    parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): void {
+    async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         switch (extrinsicSection) {
             case (ExtrinsicSection.COUNCIL):
-                if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.CLOSE) this.parseCouncilClose(extrinsicEvents, args, blockEntity);
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseCouncilPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseCouncilVote(args, blockEntity, chain, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.CLOSE) await this.parseCouncilClose(extrinsicEvents, args, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseCouncilPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.BOUNTIES):
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSEBOUNTY) this.parseProposeBounty(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.CLAIMBOUNTY) this.parseClaimBounty(extrinsicEvents);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSEBOUNTY) await this.parseProposeBounty(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.CLAIMBOUNTY) await this.parseClaimBounty(extrinsicEvents);
                 break;
             case (ExtrinsicSection.TREASURY):
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSESPEND) this.parseTreasuryProposeSpend(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSESPEND) await this.parseTreasuryProposeSpend(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIMESTAMP):
-                if (extrinsicMethod === ExtrinsicMethod.SET) this.parseTimestampSet(blockEvents, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.SET) await this.parseTimestampSet(blockEvents, blockEntity);
                 break;
             case (ExtrinsicSection.MULTISIG):
-                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) this.parseClaimBounty(extrinsicEvents);
+                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseClaimBounty(extrinsicEvents);
                 break;
             case (ExtrinsicSection.DEMOCRACY):
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.SECOND) this.parseDemocracySecond(extrinsicEvents, blockEntity, extrinsic);
-                if (extrinsicMethod === ExtrinsicMethod.VOTE) this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity, extrinsic, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity, extrinsic);
+                if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity, extrinsic, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIPS):
-                this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
+                await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.UTILITY):
                 if (extrinsicMethod === ExtrinsicMethod.BATCH) this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
@@ -601,7 +601,6 @@ export const indexingService = {
                     const insertedTipProposal = await tipProposalRepository.insert(tipProposal);
                     tip.tip_proposal_id = insertedTipProposal.id;
                 }
-
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
                 tip.tipper = account.id;
@@ -649,8 +648,9 @@ export const indexingService = {
     async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsic: any, extrinsicSigner: string): Promise<void> {
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
-            const encoded_proposal = args.encoded_proposal
-            const decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
+            const encoded_proposal = args.encoded_proposal.toString();
+            const decoded_proposal = api.createType(encoded_proposal).toHuman();
+
             const preImageMethod = decoded_proposal.method;
             const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
@@ -660,7 +660,6 @@ export const indexingService = {
                 proposal.section = preImageSection!.toString();
                 proposal.method = preImageMethod!.toString();
                 proposal.proposed_by = account.id
-                console.log(proposalRepository)
                 proposalRepository.update(proposal)
             }
             else {
@@ -686,7 +685,6 @@ export const indexingService = {
             const address = JSON.parse(JSON.stringify(secondEvent!.data))[0];
             const proposal_index = JSON.parse(JSON.stringify(secondEvent!.data))[1];
             endorsement.endorsed_at = blockEntity.id;
-
             const account = await accountRepository.getOrCreateAccount(address, chain.id);
             endorsement.endorser = account.id;
 
