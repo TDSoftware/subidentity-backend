@@ -179,7 +179,12 @@ export const indexingService = {
         if (!councilMotionEntry) {
             councilMotionRepository.insert(councilMotion);
         } else if (councilMotionEntry) {
-            councilMotionRepository.update(councilMotion);
+            councilMotionEntry.motion_hash = councilMotion.motion_hash
+            councilMotionEntry.proposal_index = councilMotion.proposal_index
+            councilMotionEntry.to_block = councilMotion.to_block
+            councilMotionEntry.chain_id = councilMotion.chain_id
+            councilMotionEntry.status = councilMotion.status
+            councilMotionRepository.update(councilMotionEntry);
         }
 
         const bountyEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Bounties);
@@ -299,10 +304,16 @@ export const indexingService = {
             entry.proposed_by = proposer.id;
             entry.proposed_at = blockEntity.id;
 
-            if (bountyEntry) {
-                bountyRepository.update(entry);
-            } else {
+            if (!bountyEntry) {
                 bountyRepository.insert(entry);
+            } else {
+                bountyEntry.bounty_id = entry.id;
+                bountyEntry.description = entry.description;
+                bountyEntry.value = entry.value;
+                bountyEntry.chain_id = entry.chain_id;
+                bountyEntry.proposed_by = entry.proposed_by;
+                bountyEntry.proposed_at = entry.proposed_at;
+                bountyRepository.update(bountyEntry);
             }
         }
     },
@@ -312,14 +323,23 @@ export const indexingService = {
         for (let index = 0; index < treasuryProposedEvents.length; index++) {
             const tpe = treasuryProposedEvents[index];
             const proposalId = JSON.parse(JSON.stringify(tpe.data))[0];
-            const entryList = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
-            if (entryList) {
-                const entry = entryList;
-                entry.value = parseFloat(args.value.replace(/,/g, ""));
-                const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-                entry.proposed_by = proposer.id;
-                entry.proposed_at = blockEntity.id;
-                treasureProposalRepository.update(entry);
+            const tpEntry = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
+            const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+            if (tpEntry) {
+                tpEntry.value = parseFloat(args.value.replace(/,/g, ""));
+                tpEntry.proposed_by = proposer.id;
+                tpEntry.proposed_at = blockEntity.id;
+                treasureProposalRepository.update(tpEntry);
+            } else {
+                const tp = <TreasuryProposalEntity>{
+                    proposal_id: proposalId,
+                    value: parseFloat(args.value.replace(/,/g, "")),
+                    chain_id: chain.id,
+                    status: TreasuryProposalStatus.Proposed,
+                    proposed_by: proposer.id,
+                    proposed_at: blockEntity.id
+                };
+                treasureProposalRepository.insert(tp);
             }
         }
     },
@@ -362,6 +382,7 @@ export const indexingService = {
             if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
+                    chain_id: chain.id,
                     status: ReferendumStatus.Executed,
                     ended_at: blockEntity.id
                 };
@@ -379,9 +400,13 @@ export const indexingService = {
             if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
+                    chain_id: chain.id,
                     status: ReferendumStatus.Passed
                 };
                 referendumRepository.insert(referendumEntity);
+            } else {
+                referendum.status = ReferendumStatus.Passed;
+                referendumRepository.update(referendum);
             }
         }
 
@@ -391,6 +416,7 @@ export const indexingService = {
             if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
+                    chain_id: chain.id,
                     status: ReferendumStatus.NotPassed,
                     ended_at: blockEntity.id
                 };
@@ -408,6 +434,7 @@ export const indexingService = {
             if (!referendum) {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
+                    chain_id: chain.id,
                     status: ReferendumStatus.Cancelled,
                     ended_at: blockEntity.id
                 };
@@ -481,12 +508,18 @@ export const indexingService = {
             for (let i = 0; i < claimedEvents.length; i++) {
                 const ce = claimedEvents[i];
                 const claimEventData = JSON.parse(JSON.stringify(ce.data));
-                const bounty = <BountyEntity>{
-                    bounty_id: claimEventData[0],
-                    status: BountyStatus.Claimed,
-                    chain_id: chain.id
-                };
-                await bountyRepository.insert(bounty);
+                const bountyEntry = await bountyRepository.getByBountyIdAndChainId(claimEventData[0], chain.id);
+                if (!bountyEntry) {
+                    const bounty = <BountyEntity>{
+                        bounty_id: claimEventData[0],
+                        status: BountyStatus.Claimed,
+                        chain_id: chain.id
+                    };
+                    await bountyRepository.insert(bounty);
+                } else {
+                    bountyEntry.status = BountyStatus.Claimed;
+                    await bountyRepository.update(bountyEntry);
+                }
             }
         }
     },
