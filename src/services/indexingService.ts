@@ -647,26 +647,31 @@ export const indexingService = {
         this function decodes the encoded_proposal and gets the call for a proposal
     */
     async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsic: any, extrinsicSigner: string): Promise<void> {
-        const encoded_proposal = args.encoded_proposal
-        const decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
-        const preImageMethod = decoded_proposal.method;
-        const preImageSection = decoded_proposal.section;
-
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
+            const encoded_proposal = args.encoded_proposal
+            const decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
+            const preImageMethod = decoded_proposal.method;
+            const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
             const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
-            const proposalEntity = <ProposalEntity>{
-                chain_id: chain.id,
-                motion_hash: proposal_hash,
-                section: preImageSection,
-                method: preImageMethod,
-                proposed_by: account.id
+            const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id)
+            if (proposal) {
+                proposal.section = preImageSection!.toString();
+                proposal.method = preImageMethod!.toString();
+                proposal.proposed_by = account.id
+                console.log(proposalRepository)
+                proposalRepository.update(proposal)
             }
-            if(!await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id)){
-                await proposalRepository.insert(proposalEntity);
-            } else {
-                await proposalRepository.update(proposalEntity);
+            else {
+                const proposalEntity = <ProposalEntity>{
+                    chain_id: chain.id,
+                    motion_hash: proposal_hash,
+                    section: preImageSection,
+                    method: preImageMethod,
+                    proposed_by: account.id
+                }
+                proposalRepository.insert(proposalEntity)
             }
         }
     },
