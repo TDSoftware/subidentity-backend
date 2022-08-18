@@ -117,7 +117,26 @@ Example request:
 curl --location --request GET 'http://localhost:5001/version'
 ```
 
-## Indexing
+## Identity Indexing
 By default, the scheduler is set up to fetch identities from known chains at every 15th minute (e.g. 9:00, 9:15, 9:30, ...). Depending on the use case this value can be adjusted. Therefore, you need to adjust the cron schedule in [scheduler.ts](./src/scheduler.ts). For more information regarding the adjustment read about [node-cron](https://www.npmjs.com/package/node-cron).
 
 ℹ️ If the API described above is used for requesting the chain status or identities for a node endpoint for the first time, the respective chain is added to the database if it implements the identity pallet, and the provided node is an archive node. When the scheduled indexing is running again, this chain will be indexed automatically. Thereupon the API Service can be used to fetch identities from this chain.
+
+# General Indexing
+The indexer uses the polkadot js api to retrieve the data to our database. To index a chain, you first have to call the /chain/status?parameter=wss://endpoint.rpc.url route to add the corresponding chain to the database. To increase efficiency, the indexer will determine the amount of cpu cores in the executing machine and will create batches of blocks to separately be indexed by different workers. When starting the indexer, two different scripts will be executed concurrently: the indexer and a block listener. The block listener will subscribe to new blocks and run the indexing functions on them. The indexing process can take a while depending on the hardware it is executed on and the performance of the given endpoint. If for any reason the indexer crashes, it can be restarted by using the same command. It will recalculate the batches and pick up where it left off.
+
+Indexer and listener concurrently (given --endpoint for both scripts in package.json): 
+```
+npm run dev-exec 
+```
+
+Indexer only (given --from and --to blocks in package.json):
+```
+npm run dev-indexer 
+```
+
+Listener only (given --endpoint in package.json):
+```
+npm run dev-listener
+```
+
