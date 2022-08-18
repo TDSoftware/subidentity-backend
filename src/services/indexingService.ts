@@ -649,8 +649,7 @@ export const indexingService = {
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
             const encoded_proposal = args.encoded_proposal.toString();
-            const decoded_proposal = api.createType(encoded_proposal).toHuman();
-
+            const decoded_proposal = api.createType("Proposal", encoded_proposal).toHuman();
             const preImageMethod = decoded_proposal.method;
             const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
@@ -661,8 +660,7 @@ export const indexingService = {
                 proposal.method = preImageMethod!.toString();
                 proposal.proposed_by = account.id
                 proposalRepository.update(proposal)
-            }
-            else {
+            } else {
                 const proposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
                     motion_hash: proposal_hash,
