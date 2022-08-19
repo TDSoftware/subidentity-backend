@@ -45,7 +45,7 @@ import { referendumRepository } from "../repositories/referendumRepository";
 import { referendumVoteRepository } from "../repositories/referendumVoteRepository";
 import { tipProposalRepository } from "../repositories/tipProposalRepository";
 import { tipRepository } from "../repositories/tipRepository";
-import { treasureProposalRepository } from "../repositories/treasuryProposalRepository";
+import { treasuryProposalRepository } from "../repositories/treasuryProposalRepository";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -264,13 +264,13 @@ export const indexingService = {
 
         if (proposal.method === ExtrinsicMethod.APPROVEPROPOSAL && proposal.section === ExtrinsicSection.TREASURY) {
             const proposalID = proposal.args.proposal_id;
-            const proposalEntry = await treasureProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
+            const proposalEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
             councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
 
             if (proposalEntry) {
                 if (councilMotionEntry) {
                     proposalEntry.council_motion_id = councilMotionEntry.id;
-                    await treasureProposalRepository.update(proposalEntry);
+                    await treasuryProposalRepository.update(proposalEntry);
                 }
             } else if (!proposalEntry) {
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
@@ -288,7 +288,7 @@ export const indexingService = {
                     treasuryProposal.council_motion_id = councilMotionEntry.id;
                 }
 
-                treasureProposalRepository.insert(treasuryProposal);
+                treasuryProposalRepository.insert(treasuryProposal);
             }
         }
     },
@@ -333,13 +333,13 @@ export const indexingService = {
         for (let index = 0; index < treasuryProposedEvents.length; index++) {
             const tpe = treasuryProposedEvents[index];
             const proposalId = JSON.parse(JSON.stringify(tpe.data))[0];
-            const tpEntry = await treasureProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
+            const tpEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             if (tpEntry) {
                 tpEntry.value = parseFloat(args.value.replace(/,/g, ""));
                 tpEntry.proposed_by = proposer.id;
                 tpEntry.proposed_at = blockEntity.id;
-                treasureProposalRepository.update(tpEntry);
+                treasuryProposalRepository.update(tpEntry);
             } else {
                 const tp = <TreasuryProposalEntity>{
                     proposal_id: proposalId,
@@ -349,7 +349,7 @@ export const indexingService = {
                     proposed_by: proposer.id,
                     proposed_at: blockEntity.id
                 };
-                treasureProposalRepository.insert(tp);
+                treasuryProposalRepository.insert(tp);
             }
         }
     },
@@ -495,14 +495,14 @@ export const indexingService = {
                 const te = treasuryEvents[i];
                 const treasuryEvent = JSON.parse(JSON.stringify(te));
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
-                const existingProposal = await treasureProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id);
+                const existingProposal = await treasuryProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id);
                 if (!existingProposal) {
                     treasuryProposal.status = TreasuryProposalStatus.Awarded;
                     treasuryProposal.proposal_id = treasuryEvent.data[0];
                     const beneficiaryAccount = await accountRepository.getOrCreateAccount(treasuryEvent.data[2], chain.id);
                     treasuryProposal.beneficiary = beneficiaryAccount.id;
                     treasuryProposal.chain_id = chain.id;
-                    treasureProposalRepository.insert(treasuryProposal);
+                    treasuryProposalRepository.insert(treasuryProposal);
                 }
             }
         }

@@ -13,4 +13,4 @@ class TreasuryProposalRepository extends MySQLRepository<TreasuryProposalEntity>
     }
 }
 
-export const treasureProposalRepository = new TreasuryProposalRepository();
+export const treasuryProposalRepository = new TreasuryProposalRepository();
