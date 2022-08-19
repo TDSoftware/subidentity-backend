@@ -7,7 +7,7 @@ CREATE TABLE tip_proposal (
     FOREIGN KEY(beneficiary) REFERENCES account(id),
     finder INT(11) UNSIGNED,
     FOREIGN KEY(finder) REFERENCES account(id),
-    reason VARCHAR(255),
+    reason TEXT,
     status VARCHAR(255),
     value BIGINT UNSIGNED,
     proposed_at BIGINT UNSIGNED,

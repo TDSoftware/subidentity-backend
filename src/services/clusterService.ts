@@ -1,3 +1,6 @@
+import { ChainStatus } from './../types/enums/ChainStatus';
+import { chainRepository } from './../repositories/chainRepository';
+import { blockRepository } from './../repositories/blockRepository';
 import { executionManager } from "./../executionManager";
 import { indexingService } from "./indexingService";
 import cluster from "cluster";
@@ -7,6 +10,7 @@ const INCREMENT = "INCREMENT";
 const COUNTER = "COUNTER";
 const SLOT = "SLOT";
 const cpuCores = os.cpus().length;
+const scheduler = require('node-schedule');
 
 export const clusterService = {
 
@@ -17,7 +21,7 @@ export const clusterService = {
     incrementCounter(): void {
         process.send!({ topic: INCREMENT });
     },
-    
+
     async indexSlots(endpoint: string): Promise<void> {
         let slots: number[][] = [];
         if (cluster.isPrimary) {
@@ -42,7 +46,19 @@ export const clusterService = {
                 }
             });
 
+            // checks if there are orphan blocks under the highest index number, sets the status to indexed if there are none
+            let chain = await chainRepository.findByWsProvider(endpoint);
+            const indexThreshold = slots.reduce((acc, curr) => { return acc[1] > curr[1] ? acc : curr; })[1];
+            scheduler.scheduleJob("0 */30 * * * *", async () => {
+                const orphanBlocks = await blockRepository.getOrphanBlocksUnderBlockNumber(indexThreshold, chain!.id)
+                console.log(orphanBlocks)
+                if (!orphanBlocks) {
+                    chain!.status = ChainStatus.Indexed;
+                    chainRepository.update(chain!);
+                }
+            });
             console.log("Indexing will commence in " + slots.length + " batches.");
+
         } else if(cluster.isWorker){
             // retrieve slots
             setTimeout(this.retrieveSlots, 100 * cluster.worker!.id);

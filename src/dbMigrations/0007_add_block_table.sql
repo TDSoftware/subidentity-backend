@@ -6,5 +6,5 @@ CREATE TABLE block (
     number INT,
     CONSTRAINT number_chain UNIQUE (number,chain_id),
     error Boolean,
-    error_message VARCHAR(255)
+    error_message TEXT
 )
