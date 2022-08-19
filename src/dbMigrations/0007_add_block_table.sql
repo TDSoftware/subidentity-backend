@@ -4,5 +4,7 @@ CREATE TABLE block (
     FOREIGN KEY(chain_id) REFERENCES chain(id),
     hash VARCHAR(255),
     number INT,
-    CONSTRAINT number_chain UNIQUE (number,chain_id)
+    CONSTRAINT number_chain UNIQUE (number,chain_id),
+    error Boolean,
+    error_message VARCHAR(255)
 )

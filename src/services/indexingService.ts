@@ -64,7 +64,17 @@ export const indexingService = {
     },
 
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
-        await indexingService.parseExtrinsic(block, blockHash);
+        try {
+            await indexingService.parseExtrinsic(block, blockHash);
+        } catch(e) {
+            console.log("[indexingService] Error parsing block: ", e);
+            const block = await blockRepository.getByBlockHash(blockHash);
+            if(block) {
+                block.error = true;
+                block.error_message = String(e);
+                await blockRepository.update(block);
+            }
+        }
     },
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
@@ -77,14 +87,14 @@ export const indexingService = {
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
-        // console.time("BLOCK: " + block.block.header.number.toNumber());
+        console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
-        let blockEntity = <BlockEntity>{};
 
+        let blockEntity = <BlockEntity>{};
         if (await blockRepository.existsByBlockHash(blockHash)) return;
-        else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id));
+        else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id, false, ""));
 
         for (let index = 0; index < extrinsics.length; index++) {
             const ex = extrinsics[index];
@@ -112,7 +122,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
