@@ -366,8 +366,16 @@ export const indexingService = {
         const democracyCancelledEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.Cancelled);
 
         if (democracyStartedEvent) {
+            console.log(democracyStartedEvent)
             const referendum_index = JSON.parse(JSON.stringify(democracyStartedEvent.data))[0];
             const voteThreshold = JSON.parse(JSON.stringify(democracyStartedEvent.data))[1];
+            let proposalId: number | null;
+
+            if(democracyTabledEvent) {
+                proposalId = JSON.parse(JSON.stringify(democracyTabledEvent.data))[0];
+            } else proposalId = null;
+
+            console.log(proposalId);
 
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
             if (!referendum) {
@@ -376,12 +384,14 @@ export const indexingService = {
                     referendum_index: referendum_index,
                     vote_threshold: voteThreshold,
                     status: ReferendumStatus.Started,
-                    started_at: blockEntity.id
+                    started_at: blockEntity.id,
+                    proposal_id: proposalId
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
                 referendum.started_at = blockEntity.id;
                 referendum.vote_threshold = voteThreshold;
+                if(proposalId) referendum.proposal_id = proposalId;
                 referendumRepository.update(referendum);
             }
         }
@@ -692,7 +702,7 @@ export const indexingService = {
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
             const encoded_proposal = args.encoded_proposal.toString();
-            const decoded_proposal = api.createType("Proposal", encoded_proposal).toHuman();
+            const decoded_proposal = api.createType('Call', encoded_proposal)!.toHuman();
             const preImageMethod = decoded_proposal.method;
             const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
@@ -770,7 +780,6 @@ export const indexingService = {
             else {
                 vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
             }
-            console.log("democracy vote");
             const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             vote.voter = voter.id;
 
