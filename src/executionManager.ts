@@ -18,13 +18,14 @@ export const executionManager = {
         chain = chain = await chainService.getChainEntityByWsProvider(endpoint);
         const wsProvider = new WsProvider(endpoint);
         const api = await ApiPromise.create({ provider: wsProvider });
+        
         const latestBlock = await api.rpc.chain.getHeader().then((header: Header) => header.number.toNumber());
         const slots = [];
         let slotsWithNext: number[][] = [];
         const blockCount = await blockRepository.getBlockCount(chain.id);
 
         if(blockCount === 0) {
-            console.log("No blocks found. Calculating slots...");
+            console.log("No blocks found for " + chain.chain_name + ". Calculating slots...");
             const slotSpan = latestBlock / slotCount;
             for (let i = 0; i < slotCount; i++) {
                 const slot = Math.round(0 + (slotSpan * i));
@@ -41,7 +42,7 @@ export const executionManager = {
     },
 
     async recalculateSlots(): Promise<number[][]> {
-        console.log("Continuing indexing " + chain.chain_name +  " ,recalculating slots...");
+        console.log("Continuing indexing " + chain.chain_name +  ", recalculating slots...");
         const slotsWithNext = [];
         // we are first getting the orphan blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
         const orphanBlocks = await blockRepository.getOrphanBlocks(chain.id);
