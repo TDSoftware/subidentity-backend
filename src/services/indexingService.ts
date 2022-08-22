@@ -28,7 +28,7 @@ import { TipProposalEntity } from "../types/entities/TipProposalEntity";
 import { TipProposalStatus } from "./../types/enums/TipProposalStatus";
 import { TreasuryProposalEntity } from "../types/entities/TreasuryProposalEntity";
 import { TreasuryProposalStatus } from "../types/enums/TreasuryProposalStatus";
-import { Vec } from "@polkadot/types";
+import { Vec, createTypeUnsafe } from "@polkadot/types";
 import { Vote } from "../types/enums/Vote";
 import { accountRepository } from "../repositories/accountRepository";
 import { blockMapper } from "./mapper/blockMapper";
@@ -81,13 +81,21 @@ export const indexingService = {
         console.log("Indexing start: " + new Date() + " from: " + from + " to: " + to);
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
+        wsProvider.on("disconnected", () => {
+            console.log("WsProvider disconnected. Trying to reconnect...");
+            wsProvider = new WsProvider(wsProviderAddress);
+        });
         api = await ApiPromise.create({ provider: wsProvider });
+        api.on("disconnected", () => {
+            console.log("Disconnected from " + wsProviderAddress);
+            api.connect();
+        });
         const startHash = await api.rpc.chain.getBlockHash(from);
         indexingService.readBlock(startHash.toString(), from, to);
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
-        console.time("BLOCK: " + block.block.header.number.toNumber());
+        // console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -122,7 +130,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -707,10 +715,20 @@ export const indexingService = {
         this function decodes the encoded_proposal and gets the call for a proposal
     */
     async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any): Promise<void> {
+        let decoded_proposal: Record<string, AnyJson> = {};
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
             const encoded_proposal = args.encoded_proposal.toString();
-            const decoded_proposal = api.createType('Call', encoded_proposal)!.toHuman();
+            try {
+                decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
+            } catch (e) {
+                try {
+                    decoded_proposal = api.createType('Call', encoded_proposal).toHuman();
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+            console.log(decoded_proposal);            
             const preImageMethod = decoded_proposal.method;
             const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
