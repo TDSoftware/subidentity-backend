@@ -41,7 +41,7 @@ export const executionManager = {
     },
 
     async recalculateSlots(): Promise<number[][]> {
-        console.log("Continuing indexing, recalculating slots...");
+        console.log("Continuing indexing " + chain.chain_name +  " ,recalculating slots...");
         const slotsWithNext = [];
         // we are first getting the orphan blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
         const orphanBlocks = await blockRepository.getOrphanBlocks(chain.id);

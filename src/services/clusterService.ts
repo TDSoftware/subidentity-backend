@@ -1,8 +1,9 @@
-import { ChainStatus } from './../types/enums/ChainStatus';
-import { chainRepository } from './../repositories/chainRepository';
-import { blockRepository } from './../repositories/blockRepository';
+import { ChainStatus } from "./../types/enums/ChainStatus";
+import { chainRepository } from "./../repositories/chainRepository";
+import { blockRepository } from "./../repositories/blockRepository";
 import { executionManager } from "./../executionManager";
 import { indexingService } from "./indexingService";
+import cron from "node-cron";
 import cluster from "cluster";
 import os from "os";
 
@@ -10,7 +11,6 @@ const INCREMENT = "INCREMENT";
 const COUNTER = "COUNTER";
 const SLOT = "SLOT";
 const cpuCores = os.cpus().length;
-const scheduler = require('node-schedule');
 
 export const clusterService = {
 
@@ -45,18 +45,18 @@ export const clusterService = {
                     worker.send({ topic: SLOT, value: slots });
                 }
             });
-
-            // checks if there are orphan blocks under the highest index number, sets the status to indexed if there are none
-            let chain = await chainRepository.findByWsProvider(endpoint);
-            const indexThreshold = slots.reduce((acc, curr) => { return acc[1] > curr[1] ? acc : curr; })[1];
-            scheduler.scheduleJob("0 */30 * * * *", async () => {
-                const orphanBlocks = await blockRepository.getOrphanBlocksUnderBlockNumber(indexThreshold, chain!.id)
-                console.log(orphanBlocks)
+            
+            cron.schedule("0 */30 * * * *", async () => {
+                const chain = await chainRepository.findByWsProvider(endpoint);
+                const indexThreshold = slots.reduce((acc: number[], curr: number[]) => { return acc[1] > curr[1] ? acc : curr })[1];
+                const orphanBlocks = await blockRepository.getOrphanBlocksUnderBlockNumber(indexThreshold, chain!.id);
                 if (!orphanBlocks) {
                     chain!.status = ChainStatus.Indexed;
                     chainRepository.update(chain!);
+                    console.log("Chain " + chain!.chain_name + " is now indexed. You can close this window.");
                 }
             });
+
             console.log("Indexing will commence in " + slots.length + " batches.");
 
         } else if(cluster.isWorker){

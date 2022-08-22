@@ -8,7 +8,7 @@ let chain: ChainEntity;
 let wsProvider: WsProvider;
 let api: ApiPromise;
 let blockHashes: number[] = [];
-const batchCount = 25;
+const batchCount = 150;
 
 export const listenerService = {
     async parseNewBlocks(wsProviderAddress: string): Promise<void> {
@@ -16,7 +16,6 @@ export const listenerService = {
         wsProvider = new WsProvider(wsProviderAddress);
         api = await ApiPromise.create({ provider: wsProvider });
 
-        // TODO allHeads for finalizedHeads?
         await api.rpc.chain.subscribeAllHeads(async (header: Header) => {
             const blockNumber = header.number.toNumber();
             if(!blockHashes.find((blockNum: number) => blockNum === blockNumber)) {

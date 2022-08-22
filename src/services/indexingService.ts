@@ -147,9 +147,9 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.DEMOCRACY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity, extrinsic);
+                if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity, extrinsic, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args);
                 break;
             case (ExtrinsicSection.TIPS):
                 await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
@@ -189,11 +189,11 @@ export const indexingService = {
         if (!councilMotionEntry) {
             councilMotionRepository.insert(councilMotion);
         } else if (councilMotionEntry) {
-            councilMotionEntry.motion_hash = councilMotion.motion_hash
-            councilMotionEntry.proposal_index = councilMotion.proposal_index
-            councilMotionEntry.to_block = councilMotion.to_block
-            councilMotionEntry.chain_id = councilMotion.chain_id
-            councilMotionEntry.status = councilMotion.status
+            councilMotionEntry.motion_hash = councilMotion.motion_hash;
+            councilMotionEntry.proposal_index = councilMotion.proposal_index;
+            councilMotionEntry.to_block = councilMotion.to_block;
+            councilMotionEntry.chain_id = councilMotion.chain_id;
+            councilMotionEntry.status = councilMotion.status;
             councilMotionRepository.update(councilMotionEntry);
         }
 
@@ -688,7 +688,7 @@ export const indexingService = {
     /*
         this function decodes the encoded_proposal and gets the call for a proposal
     */
-    async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsic: any, extrinsicSigner: string): Promise<void> {
+    async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any): Promise<void> {
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
             const encoded_proposal = args.encoded_proposal.toString();
@@ -697,12 +697,12 @@ export const indexingService = {
             const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
             const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id)
+            const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id);
             if (proposal) {
                 proposal.section = preImageSection!.toString();
                 proposal.method = preImageMethod!.toString();
-                proposal.proposed_by = account.id
-                proposalRepository.update(proposal)
+                proposal.proposed_by = account.id;
+                proposalRepository.update(proposal);
             } else {
                 const proposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
@@ -710,8 +710,8 @@ export const indexingService = {
                     section: preImageSection,
                     method: preImageMethod,
                     proposed_by: account.id
-                }
-                proposalRepository.insert(proposalEntity)
+                };
+                proposalRepository.insert(proposalEntity);
             }
         }
     },
@@ -719,7 +719,7 @@ export const indexingService = {
     /*
        this function is called to parse the endorsals/ seconds for proposals
     */
-    async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsic: any): Promise<void> {
+    async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
         const secondEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Seconded && e.section === EventSection.Democracy);
         if (secondEvent) {
             const endorsement = <EndorsementEntity>{};
@@ -770,7 +770,7 @@ export const indexingService = {
             else {
                 vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
             }
-
+            console.log("democracy vote");
             const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             vote.voter = voter.id;
 
