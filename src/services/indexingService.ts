@@ -366,16 +366,24 @@ export const indexingService = {
         const democracyCancelledEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.Cancelled);
 
         if (democracyStartedEvent) {
-            console.log(democracyStartedEvent)
             const referendum_index = JSON.parse(JSON.stringify(democracyStartedEvent.data))[0];
             const voteThreshold = JSON.parse(JSON.stringify(democracyStartedEvent.data))[1];
             let proposalId: number | null;
 
             if(democracyTabledEvent) {
-                proposalId = JSON.parse(JSON.stringify(democracyTabledEvent.data))[0];
+                const proposal = await proposalRepository.getByProposalIndexAndChainId(JSON.parse(JSON.stringify(democracyTabledEvent.data))[0], chain.id);
+                if (!proposal) {
+                    const proposalEntity = <ProposalEntity>{
+                        proposal_index: JSON.parse(JSON.stringify(democracyTabledEvent.data))[0]!,
+                        chain_id: chain.id,
+                        status: ProposalStatus.Tabled
+                    };
+                    const proposalEntry = await proposalRepository.insert(proposalEntity);
+                    proposalId = proposalEntry.id;
+                } else {
+                    proposalId = proposal.id;
+                }
             } else proposalId = null;
-
-            console.log(proposalId);
 
             const referendum = await referendumRepository.getByReferendumIndexAndChainId(referendum_index, chain.id);
             if (!referendum) {

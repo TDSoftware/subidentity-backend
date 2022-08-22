@@ -7,6 +7,6 @@ CREATE TABLE referendum_vote (
     voted_at BIGINT UNSIGNED,
     FOREIGN KEY(voted_at) REFERENCES block(id),
     locked_value BIGINT,
-    conviction INT(11),
+    conviction FLOAT(2),
     vote Boolean
 )
