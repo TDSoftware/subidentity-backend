@@ -724,16 +724,17 @@ export const indexingService = {
             // decoding is a little janky but this should work for now, manual adjustment afterwards may be required
             const encoded_proposal = args.encoded_proposal.toString();
             try {
-                decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
+                decoded_proposal = api.createType("Proposal", encoded_proposal).toHuman();
             } catch (e) {
                 try {
-                    decoded_proposal = api.createType('Call', encoded_proposal).toHuman();
+                    decoded_proposal = api.createType("Call", encoded_proposal).toHuman();
                 } catch (e) {
-                    console.log(e);
+                    console.warn(e);
                 }
             }            
             let preImageMethod = decoded_proposal.method!.toString();
             let preImageSection = decoded_proposal.section!.toString();
+
             if(!preImageMethod && !preImageSection) {
                 preImageMethod = "ERROR";
                 preImageSection = "ERROR";
