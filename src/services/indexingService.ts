@@ -83,7 +83,7 @@ export const indexingService = {
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
         wsProvider.on("disconnected", () => {
-            console.log("WsProvider disconnected. Trying to reconnect...");
+            console.log("WsProvider: " + wsProviderAddress + "disconnected. Trying to reconnect...");
             wsProvider.on("connected", () => {
                 console.log("WsProvider reconnected.");
             });
@@ -91,7 +91,7 @@ export const indexingService = {
         });
         api = await ApiPromise.create({ provider: wsProvider });
         api.on("disconnected", () => {
-            console.log("Disconnected from " + wsProviderAddress);
+            console.log("Disconnected from " + wsProviderAddress + " API. Trying to reconnect...");
             api.on("connected", () => {
                 console.log("Reconnected to " + wsProviderAddress);
             });
@@ -102,7 +102,7 @@ export const indexingService = {
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
-        // console.time("BLOCK: " + block.block.header.number.toNumber());
+        console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -137,7 +137,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        // console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {

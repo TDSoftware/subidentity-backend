@@ -9,7 +9,6 @@ let wsProvider: WsProvider;
 let api: ApiPromise;
 let blockNumbers: number[] = [];
 const batchCount = 150;
-// this can be adjusted
 const blockOverhead = 40;
 
 
@@ -23,11 +22,12 @@ export const listenerService = {
             const blockNumber = header.number.toNumber();
             if(!blockNumbers.find((blockNum: number) => blockNum === blockNumber)) {
                 blockNumbers.push(blockNumber);
-                //console.log("New Block: " + blockNumber + " found! " + (batchCount - blockNumbers.length) + " blocks left until batch will be indexed.");
+                console.log("New Block: " + blockNumber + " found! " + (batchCount - blockNumbers.length) + " blocks left until batch will be indexed.");
             }
 
             // we do it like this because the blocks we get are not necessarily finalized
             // so we cut out a certain amount of blocks from the end of the array, can probably be handled better
+            // adjust blockOverhead according to the time it takes for a block to finalize
             if(blockNumbers.length === batchCount) {
                 const blockNumbersRest = blockNumbers.slice(-(blockOverhead));
                 blockNumbers = blockNumbers.slice(0, -(blockOverhead));
