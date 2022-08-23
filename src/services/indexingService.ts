@@ -46,6 +46,7 @@ import { referendumVoteRepository } from "../repositories/referendumVoteReposito
 import { tipProposalRepository } from "../repositories/tipProposalRepository";
 import { tipRepository } from "../repositories/tipRepository";
 import { treasuryProposalRepository } from "../repositories/treasuryProposalRepository";
+import { ProposalType } from "../types/enums/ProposalType";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -398,7 +399,8 @@ export const indexingService = {
                         proposal_index: JSON.parse(JSON.stringify(democracyTabledEvent.data))[0]!,
                         chain_id: chain.id,
                         status: ProposalStatus.Tabled,
-                        modified_at: blockEntity.id
+                        modified_at: blockEntity.id,
+                        type: ProposalType.Democracy
                     };
                     const proposalEntry = await proposalRepository.insert(proposalEntity);
                     proposalId = proposalEntry.id;
@@ -519,7 +521,8 @@ export const indexingService = {
                     chain_id: chain.id,
                     proposal_index: proposalIndex,
                     status: ProposalStatus.Tabled,
-                    modified_at: blockEntity.id
+                    modified_at: blockEntity.id,
+                    type: ProposalType.Democracy
                 };
                 await proposalRepository.insert(proposalEntity);
             } else {
@@ -534,6 +537,7 @@ export const indexingService = {
         if (newCounciltermEvent) {
             const councilterm = <CounciltermEntity>{};
             councilterm.from_block = blockEntity.id;
+            councilterm.chain_id = chain.id;
             const counciltermInsert = await counciltermRepository.insert(councilterm);
             const counciltermData = Array(newCounciltermEvent.data).flat().flat();
             for (let i = 0; i < counciltermData.length; i++) {
@@ -746,7 +750,8 @@ export const indexingService = {
                     status: ProposalStatus.Proposed,
                     proposed_at: blockEntity.id,
                     motion_hash: JSON.parse(JSON.stringify(args.proposal_hash)),
-                    modified_at: blockEntity.id
+                    modified_at: blockEntity.id,
+                    type: ProposalType.Democracy
                 };
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 proposalEntity.proposed_by = account.id;
@@ -807,7 +812,8 @@ export const indexingService = {
                     method: preImageMethod,
                     proposed_by: account.id,
                     modified_at: blockEntity.id,
-                    status: ProposalStatus.Proposed
+                    status: ProposalStatus.Proposed,
+                    type: ProposalType.Democracy
                 };
                 proposalRepository.insert(proposalEntity);
             }
@@ -833,7 +839,8 @@ export const indexingService = {
                     chain_id: chain.id,
                     proposal_index: proposal_index,
                     status: ProposalStatus.Proposed,
-                    modified_at: blockEntity.id
+                    modified_at: blockEntity.id,
+                    type: ProposalType.Democracy
                 };
                 const insertedProposal = await proposalRepository.insert(proposalEntity);
                 endorsement.proposal_id = insertedProposal.id;
