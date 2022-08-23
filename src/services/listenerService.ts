@@ -24,7 +24,11 @@ export const listenerService = {
             }
             // if we have x blocks, we index them
             if(blockHashes.length === batchCount) {
-                indexingService.indexChain(wsProviderAddress, blockHashes[blockHashes.length - 1], blockHashes[0]);
+                try {
+                    await indexingService.indexChain(wsProviderAddress, blockHashes[blockHashes.length - 1], blockHashes[0]);
+                } catch (e) {
+                    console.log("[listenerService] Error while indexing new blocks: " + e);
+                }
                 blockHashes = [];
             }
         });

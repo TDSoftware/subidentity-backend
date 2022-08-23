@@ -244,59 +244,61 @@ export const indexingService = {
     async parseCouncilPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposal = args.proposal;
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Council);
-        const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1];
-        const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2];
-        let councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
-        const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+        if (proposeEvent) {
+            const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1];
+            const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2];
+            let councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
+            const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
-        if (councilMotionEntry) {
-            councilMotionEntry.method = proposal.method;
-            councilMotionEntry.section = proposal.section;
-            councilMotionEntry.proposal_index = proposalIndex;
-            councilMotionEntry.proposed_by = proposer.id;
-            councilMotionEntry.from_block = blockEntity.id;
-            await councilMotionRepository.update(councilMotionEntry);
-        } else if (!councilMotionEntry) {
-            const councilMotion = <CouncilMotionEntity>{
-                chain_id: chain.id,
-                motion_hash: councilMotionHash,
-                proposal_index: proposalIndex,
-                method: proposal.method,
-                section: proposal.section,
-                proposed_by: proposer.id,
-                from_block: blockEntity.id,
-                status: CouncilMotionStatus.Proposed
-            };
-            councilMotionEntry = await councilMotionRepository.insert(councilMotion);
-        }
+            if (councilMotionEntry) {
+                councilMotionEntry.method = proposal.method;
+                councilMotionEntry.section = proposal.section;
+                councilMotionEntry.proposal_index = proposalIndex;
+                councilMotionEntry.proposed_by = proposer.id;
+                councilMotionEntry.from_block = blockEntity.id;
+                await councilMotionRepository.update(councilMotionEntry);
+            } else if (!councilMotionEntry) {
+                const councilMotion = <CouncilMotionEntity>{
+                    chain_id: chain.id,
+                    motion_hash: councilMotionHash,
+                    proposal_index: proposalIndex,
+                    method: proposal.method,
+                    section: proposal.section,
+                    proposed_by: proposer.id,
+                    from_block: blockEntity.id,
+                    status: CouncilMotionStatus.Proposed
+                };
+                councilMotionEntry = await councilMotionRepository.insert(councilMotion);
+            }
 
-        if (proposal.method === ExtrinsicMethod.APPROVEPROPOSAL && proposal.section === ExtrinsicSection.TREASURY) {
-            const proposalID = proposal.args.proposal_id;
-            const proposalEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
-            councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
+            if (proposal.method === ExtrinsicMethod.APPROVEPROPOSAL && proposal.section === ExtrinsicSection.TREASURY) {
+                const proposalID = proposal.args.proposal_id;
+                const proposalEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
+                councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
 
-            if (proposalEntry) {
-                if (councilMotionEntry) {
-                    proposalEntry.council_motion_id = councilMotionEntry.id;
-                    await treasuryProposalRepository.update(proposalEntry);
+                if (proposalEntry) {
+                    if (councilMotionEntry) {
+                        proposalEntry.council_motion_id = councilMotionEntry.id;
+                        await treasuryProposalRepository.update(proposalEntry);
+                    }
+                } else if (!proposalEntry) {
+                    const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
+                    treasuryProposal.proposal_id = proposalID;
+
+                    if (extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Awarded && e.section === EventSection.Treasury)) {
+                        treasuryProposal.status = TreasuryProposalStatus.Awarded;
+                    } else {
+                        treasuryProposal.status = TreasuryProposalStatus.Proposed;
+                    }
+
+                    treasuryProposal.chain_id = chain.id;
+
+                    if (councilMotionEntry) {
+                        treasuryProposal.council_motion_id = councilMotionEntry.id;
+                    }
+
+                    treasuryProposalRepository.insert(treasuryProposal);
                 }
-            } else if (!proposalEntry) {
-                const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
-                treasuryProposal.proposal_id = proposalID;
-
-                if (extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Awarded && e.section === EventSection.Treasury)) {
-                    treasuryProposal.status = TreasuryProposalStatus.Awarded;
-                } else {
-                    treasuryProposal.status = TreasuryProposalStatus.Proposed;
-                }
-
-                treasuryProposal.chain_id = chain.id;
-
-                if (councilMotionEntry) {
-                    treasuryProposal.council_motion_id = councilMotionEntry.id;
-                }
-
-                treasuryProposalRepository.insert(treasuryProposal);
             }
         }
     },
@@ -718,6 +720,7 @@ export const indexingService = {
         let decoded_proposal: Record<string, AnyJson> = {};
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
+            // decoding is a little janky but this should work for now, manual adjustment afterwards may be required
             const encoded_proposal = args.encoded_proposal.toString();
             try {
                 decoded_proposal = api.createType('Proposal', encoded_proposal).toHuman();
@@ -727,16 +730,19 @@ export const indexingService = {
                 } catch (e) {
                     console.log(e);
                 }
+            }            
+            let preImageMethod = decoded_proposal.method!.toString();
+            let preImageSection = decoded_proposal.section!.toString();
+            if(preImageMethod === undefined && preImageSection === undefined) {
+                preImageMethod = "ERROR";
+                preImageSection = "ERROR";
             }
-            console.log(decoded_proposal);            
-            const preImageMethod = decoded_proposal.method;
-            const preImageSection = decoded_proposal.section;
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
             const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
             const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id);
             if (proposal) {
-                proposal.section = preImageSection!.toString();
-                proposal.method = preImageMethod!.toString();
+                proposal.section = preImageSection;
+                proposal.method = preImageMethod;
                 proposal.proposed_by = account.id;
                 proposalRepository.update(proposal);
             } else {
