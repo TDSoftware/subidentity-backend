@@ -179,7 +179,7 @@ export const indexingService = {
     async parseCouncilClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         const councilMotionEntry = await councilMotionRepository.getByMotionHash(args.proposal_hash);
         const councilEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Council);
-        for (let index = 0; index < councilEvents.length; index++) {
+        if (councilEvents) {
             const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{
                 motion_hash: args.proposal_hash,
                 proposal_index: Number(args.index),
@@ -216,32 +216,35 @@ export const indexingService = {
             const bountyEvent = JSON.parse(JSON.stringify(be));
             const bountyId = bountyEvent.data[0];
             const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
-
-            if (!bountyEntry) {
-                const bounty: BountyEntity = <BountyEntity>{
-                    chain_id: chain.id,
-                    bounty_id: bountyId,
-                    modified_at: blockEntity.id
-                };
-                switch (be.method) {
-                    case BountyMethod.BountyRejected: {
-                        bounty.status = BountyStatus.Rejected;
-                        break;
-                    }
-                    case BountyMethod.BountyAwarded: {
-                        bounty.status = BountyStatus.Awarded;
-                        break;
-                    }
-                    case BountyMethod.BountyExtended: {
-                        bounty.status = BountyStatus.Extended;
-                        break;
-                    }
-                    case BountyMethod.BountyCancelled: {
-                        bounty.status = BountyStatus.Cancelled;
-                        break;
-                    }
+            const bounty: BountyEntity = <BountyEntity>{
+                chain_id: chain.id,
+                bounty_id: bountyId,
+                modified_at: blockEntity.id
+            };
+            switch (be.method) {
+                case BountyMethod.BountyRejected: {
+                    bounty.status = BountyStatus.Rejected;
+                    break;
                 }
+                case BountyMethod.BountyAwarded: {
+                    bounty.status = BountyStatus.Awarded;
+                    break;
+                }
+                case BountyMethod.BountyExtended: {
+                    bounty.status = BountyStatus.Extended;
+                    break;
+                }
+                case BountyMethod.BountyCancelled: {
+                    bounty.status = BountyStatus.Cancelled;
+                    break;
+                }
+            }
+            if (!bountyEntry) {
                 bountyRepository.insert(bounty);
+            } else {
+                if(await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) bountyEntry.status = bounty.status;
+                bountyEntry.modified_at = blockEntity.id;
+                bountyRepository.update(bountyEntry);
             }
         }
     },
