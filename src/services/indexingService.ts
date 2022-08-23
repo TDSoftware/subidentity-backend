@@ -727,6 +727,7 @@ export const indexingService = {
                 }
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 tip.tipper = account.id;
+                console.log(args.tip_value);
                 tip.value = parseFloat(args.tip_value.replace(/,/g, ""));
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
