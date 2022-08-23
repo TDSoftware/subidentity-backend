@@ -730,8 +730,7 @@ export const indexingService = {
                 }
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 tip.tipper = account.id;
-                console.log(args.tip_value);
-                tip.value = parseFloat(args.tip_value.replace(/,/g, ""));
+                tip.value = parseFloat(args.tip_value.replace(/,/, "."));
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
                 break;
@@ -780,6 +779,8 @@ export const indexingService = {
         let decoded_proposal: Record<string, AnyJson> = {};
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
+            let preImageMethod: string = <string>{};
+            let preImageSection: string = <string>{};
             // decoding is a little janky but this should work for now, manual adjustment afterwards may be required
             const encoded_proposal = args.encoded_proposal.toString();
             try {
@@ -791,13 +792,12 @@ export const indexingService = {
                     console.warn(e);
                 }
             }
-            let preImageMethod = decoded_proposal.method!.toString();
-            let preImageSection = decoded_proposal.section!.toString();
 
-            if (!preImageMethod && !preImageSection) {
-                preImageMethod = "ERROR";
-                preImageSection = "ERROR";
+            if(decoded_proposal) {
+                preImageMethod = decoded_proposal.method!.toString();
+                preImageSection = decoded_proposal.section!.toString();
             }
+
             const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
             const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
             const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id);

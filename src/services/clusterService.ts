@@ -33,7 +33,7 @@ export const clusterService = {
             }
 
             cluster.on("exit", (worker: any) => {
-                console.log("Worker " + worker.id + " died. Restarting...");
+                console.log("Worker " + worker.id + " died.");
             });
 
             cluster.on("message", (worker: any, msg: any) => {
