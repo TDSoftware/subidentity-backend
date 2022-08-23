@@ -7,8 +7,11 @@ import { indexingService } from "./indexingService";
 let chain: ChainEntity;
 let wsProvider: WsProvider;
 let api: ApiPromise;
-let blockHashes: number[] = [];
+let blockNumbers: number[] = [];
 const batchCount = 150;
+// this can be adjusted
+const blockOverhead = 40;
+
 
 export const listenerService = {
     async parseNewBlocks(wsProviderAddress: string): Promise<void> {
@@ -18,18 +21,22 @@ export const listenerService = {
 
         await api.rpc.chain.subscribeAllHeads(async (header: Header) => {
             const blockNumber = header.number.toNumber();
-            if(!blockHashes.find((blockNum: number) => blockNum === blockNumber)) {
-                blockHashes.push(blockNumber);
-                console.log("New Block: " + blockNumber + " found! " + (batchCount - blockHashes.length) + " blocks left until batch will be indexed.");
+            if(!blockNumbers.find((blockNum: number) => blockNum === blockNumber)) {
+                blockNumbers.push(blockNumber);
+                //console.log("New Block: " + blockNumber + " found! " + (batchCount - blockNumbers.length) + " blocks left until batch will be indexed.");
             }
-            // if we have x blocks, we index them
-            if(blockHashes.length === batchCount) {
+
+            // we do it like this because the blocks we get are not necessarily finalized
+            // so we cut out a certain amount of blocks from the end of the array, can probably be handled better
+            if(blockNumbers.length === batchCount) {
+                const blockNumbersRest = blockNumbers.slice(-(blockOverhead));
+                blockNumbers = blockNumbers.slice(0, -(blockOverhead));
                 try {
-                    await indexingService.indexChain(wsProviderAddress, blockHashes[blockHashes.length - 1], blockHashes[0]);
+                    await indexingService.indexChain(wsProviderAddress, blockNumbers[blockNumbers.length - 1], blockNumbers[0]);
                 } catch (e) {
                     console.log("[listenerService] Error while indexing new blocks: " + e);
                 }
-                blockHashes = [];
+                blockNumbers = blockNumbersRest;
             }
         });
     }

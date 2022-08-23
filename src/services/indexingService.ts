@@ -84,11 +84,17 @@ export const indexingService = {
         wsProvider = new WsProvider(wsProviderAddress);
         wsProvider.on("disconnected", () => {
             console.log("WsProvider disconnected. Trying to reconnect...");
+            wsProvider.on("connected", () => {
+                console.log("WsProvider reconnected.");
+            });
             wsProvider = new WsProvider(wsProviderAddress);
         });
         api = await ApiPromise.create({ provider: wsProvider });
         api.on("disconnected", () => {
             console.log("Disconnected from " + wsProviderAddress);
+            api.on("connected", () => {
+                console.log("Reconnected to " + wsProviderAddress);
+            });
             api.connect();
         });
         const startHash = await api.rpc.chain.getBlockHash(from);
