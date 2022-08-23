@@ -178,35 +178,36 @@ export const indexingService = {
     async parseCouncilClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         const councilMotionEntry = await councilMotionRepository.getByMotionHash(args.proposal_hash);
         const councilEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Council);
-        const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{
-            motion_hash: args.proposal_hash,
-            proposal_index: Number(args.index),
-            to_block: blockEntity.id,
-            chain_id: chain.id
-        };
-        const councilEventMethod = councilEvents.map((ev: Record<string, AnyJson>) => ev.method);
+        for (let index = 0; index < councilEvents.length; index++) {
+            const councilMotion: CouncilMotionEntity = <CouncilMotionEntity>{
+                motion_hash: args.proposal_hash,
+                proposal_index: Number(args.index),
+                to_block: blockEntity.id,
+                chain_id: chain.id
+            };
+            const councilEventMethod = councilEvents.map((ev: Record<string, AnyJson>) => ev.method);
 
-        if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Approved)) {
-            councilMotion.status = CouncilMotionStatus.Approved;
-        } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Rejected)) {
-            councilMotion.status = CouncilMotionStatus.Rejected;
-        } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Disapproved)) {
-            councilMotion.status = CouncilMotionStatus.Disapproved;
-        }
+            if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Approved)) {
+                councilMotion.status = CouncilMotionStatus.Approved;
+            } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Rejected)) {
+                councilMotion.status = CouncilMotionStatus.Rejected;
+            } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Disapproved)) {
+                councilMotion.status = CouncilMotionStatus.Disapproved;
+            }
 
-        if (!councilMotionEntry) {
-            councilMotionRepository.insert(councilMotion);
-        } else if (councilMotionEntry) {
-            councilMotionEntry.motion_hash = councilMotion.motion_hash;
-            councilMotionEntry.proposal_index = councilMotion.proposal_index;
-            councilMotionEntry.to_block = councilMotion.to_block;
-            councilMotionEntry.chain_id = councilMotion.chain_id;
-            councilMotionEntry.status = councilMotion.status;
-            councilMotionRepository.update(councilMotionEntry);
+            if (!councilMotionEntry) {
+                councilMotionRepository.insert(councilMotion);
+            } else if (councilMotionEntry) {
+                councilMotionEntry.motion_hash = councilMotion.motion_hash;
+                councilMotionEntry.proposal_index = councilMotion.proposal_index;
+                councilMotionEntry.to_block = councilMotion.to_block;
+                councilMotionEntry.chain_id = councilMotion.chain_id;
+                councilMotionEntry.status = councilMotion.status;
+                councilMotionRepository.update(councilMotionEntry);
+            }
         }
 
         const bountyEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Bounties);
-
         for (let index = 0; index < bountyEvents.length; index++) {
             const be = bountyEvents[index];
             const bountyEvent = JSON.parse(JSON.stringify(be));
@@ -733,7 +734,7 @@ export const indexingService = {
             }            
             let preImageMethod = decoded_proposal.method!.toString();
             let preImageSection = decoded_proposal.section!.toString();
-            if(preImageMethod === undefined && preImageSection === undefined) {
+            if(!preImageMethod && !preImageSection) {
                 preImageMethod = "ERROR";
                 preImageSection = "ERROR";
             }
