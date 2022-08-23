@@ -12,5 +12,7 @@ CREATE TABLE council_motion (
     from_block BIGINT UNSIGNED,
     FOREIGN KEY (from_block) REFERENCES block(id),
     to_block BIGINT UNSIGNED,
-    FOREIGN KEY (to_block) REFERENCES block(id)
+    FOREIGN KEY (to_block) REFERENCES block(id),
+    modified_at BIGINT UNSIGNED,
+    FOREIGN KEY (modified_at) REFERENCES block(id)
 )

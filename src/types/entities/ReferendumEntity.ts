@@ -7,4 +7,5 @@ export interface ReferendumEntity {
     status: string;
     chain_id: number;
     vote_threshold: string;
+    modified_at: number;
 }

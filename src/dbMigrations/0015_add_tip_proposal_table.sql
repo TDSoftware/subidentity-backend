@@ -11,6 +11,8 @@ CREATE TABLE tip_proposal (
     status VARCHAR(255),
     value BIGINT UNSIGNED,
     proposed_at BIGINT UNSIGNED,
-    FOREIGN KEY(proposed_at) REFERENCES block(id)
+    FOREIGN KEY(proposed_at) REFERENCES block(id),
+    modified_at BIGINT UNSIGNED,
+    FOREIGN KEY (modified_at) REFERENCES block(id)
 )
     

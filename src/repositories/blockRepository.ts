@@ -38,7 +38,11 @@ class BlockRepository extends MySQLRepository<BlockEntity> {
         const query = `SELECT * FROM ${this.tableName} WHERE ${this.tableName}.chain_id = ${chainId} AND ${this.tableName}.number < ${blockNumber} ORDER BY ${this.tableName}.number DESC LIMIT 1`;
         return (await runSelectQuery<BlockEntity>(query))[0];
     }
-        
+
+    async hasHigherBlockNumber(firstBlockId: number, secondBlockId: number): Promise<boolean> {
+        return (await this.getById(firstBlockId)).number > (await this.getById(secondBlockId)).number;
+    }
+
 }
 
 export const blockRepository = new BlockRepository();

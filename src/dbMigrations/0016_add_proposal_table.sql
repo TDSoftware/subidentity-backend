@@ -11,5 +11,7 @@ CREATE table proposal (
     status VARCHAR(255),
     chain_id INT(11) UNSIGNED,
     FOREIGN KEY (chain_id) REFERENCES chain(id),
-    type VARCHAR(255)
+    type VARCHAR(255),
+    modified_at BIGINT UNSIGNED,
+    FOREIGN KEY (modified_at) REFERENCES block(id)
 )

@@ -8,4 +8,5 @@ export interface TreasuryProposalEntity {
     beneficiary: number;
     value: number
     status: string
+    modified_at: number;
 }

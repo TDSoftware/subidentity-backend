@@ -8,4 +8,5 @@ export interface TipProposalEntity{
     finder: number;
     status: string;
     proposed_at: number;
+    modified_at: number;
 }

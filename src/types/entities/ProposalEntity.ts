@@ -9,4 +9,5 @@ export interface ProposalEntity {
     type: string;
     proposed_by: number;
     proposed_at: number;
+    modified_at: number;
 }

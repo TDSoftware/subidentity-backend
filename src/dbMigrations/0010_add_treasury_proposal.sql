@@ -12,5 +12,7 @@ CREATE TABLE treasury_proposal (
     proposed_by INT(11) UNSIGNED,
     FOREIGN KEY (proposed_by) REFERENCES account(id),
     beneficiary INT(11) UNSIGNED,
-    FOREIGN KEY (beneficiary) REFERENCES account(id)
+    FOREIGN KEY (beneficiary) REFERENCES account(id),
+    modified_at BIGINT UNSIGNED,
+    FOREIGN KEY (modified_at) REFERENCES block(id)
 )

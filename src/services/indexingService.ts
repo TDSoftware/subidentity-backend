@@ -66,10 +66,10 @@ export const indexingService = {
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
         try {
             await indexingService.parseExtrinsic(block, blockHash);
-        } catch(e) {
+        } catch (e) {
             console.log("[indexingService] Error parsing block: ", e);
             const block = await blockRepository.getByBlockHash(blockHash);
-            if(block) {
+            if (block) {
                 block.error = true;
                 block.error_message = String(e);
                 await blockRepository.update(block);
@@ -142,7 +142,7 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.BOUNTIES):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSEBOUNTY) await this.parseProposeBounty(extrinsicEvents, args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.CLAIMBOUNTY) await this.parseClaimBounty(extrinsicEvents);
+                if (extrinsicMethod === ExtrinsicMethod.CLAIMBOUNTY) await this.parseClaimBounty(extrinsicEvents, blockEntity);
                 break;
             case (ExtrinsicSection.TREASURY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSESPEND) await this.parseTreasuryProposeSpend(extrinsicEvents, args, blockEntity, extrinsicSigner);
@@ -151,13 +151,13 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.SET) await this.parseTimestampSet(blockEvents, blockEntity);
                 break;
             case (ExtrinsicSection.MULTISIG):
-                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseClaimBounty(extrinsicEvents);
+                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseClaimBounty(extrinsicEvents, blockEntity);
                 break;
             case (ExtrinsicSection.DEMOCRACY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args);
+                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity);
                 break;
             case (ExtrinsicSection.TIPS):
                 await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
@@ -183,7 +183,8 @@ export const indexingService = {
                 motion_hash: args.proposal_hash,
                 proposal_index: Number(args.index),
                 to_block: blockEntity.id,
-                chain_id: chain.id
+                chain_id: chain.id,
+                modified_at: blockEntity.id
             };
             const councilEventMethod = councilEvents.map((ev: Record<string, AnyJson>) => ev.method);
 
@@ -202,7 +203,8 @@ export const indexingService = {
                 councilMotionEntry.proposal_index = councilMotion.proposal_index;
                 councilMotionEntry.to_block = councilMotion.to_block;
                 councilMotionEntry.chain_id = councilMotion.chain_id;
-                councilMotionEntry.status = councilMotion.status;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, councilMotionEntry.modified_at)) councilMotionEntry.status = councilMotion.status;
+                councilMotionEntry.modified_at = blockEntity.id;
                 councilMotionRepository.update(councilMotionEntry);
             }
         }
@@ -217,7 +219,8 @@ export const indexingService = {
             if (!bountyEntry) {
                 const bounty: BountyEntity = <BountyEntity>{
                     chain_id: chain.id,
-                    bounty_id: bountyId
+                    bounty_id: bountyId,
+                    modified_at: blockEntity.id
                 };
                 switch (be.method) {
                     case BountyMethod.BountyRejected: {
@@ -257,6 +260,8 @@ export const indexingService = {
                 councilMotionEntry.proposal_index = proposalIndex;
                 councilMotionEntry.proposed_by = proposer.id;
                 councilMotionEntry.from_block = blockEntity.id;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, councilMotionEntry.modified_at)) councilMotionEntry.status = CouncilMotionStatus.Proposed;
+                councilMotionEntry.modified_at = blockEntity.id;
                 await councilMotionRepository.update(councilMotionEntry);
             } else if (!councilMotionEntry) {
                 const councilMotion = <CouncilMotionEntity>{
@@ -267,7 +272,8 @@ export const indexingService = {
                     section: proposal.section,
                     proposed_by: proposer.id,
                     from_block: blockEntity.id,
-                    status: CouncilMotionStatus.Proposed
+                    status: CouncilMotionStatus.Proposed,
+                    modified_at: blockEntity.id
                 };
                 councilMotionEntry = await councilMotionRepository.insert(councilMotion);
             }
@@ -293,11 +299,11 @@ export const indexingService = {
                     }
 
                     treasuryProposal.chain_id = chain.id;
+                    treasuryProposal.modified_at = blockEntity.id;
 
                     if (councilMotionEntry) {
                         treasuryProposal.council_motion_id = councilMotionEntry.id;
                     }
-
                     treasuryProposalRepository.insert(treasuryProposal);
                 }
             }
@@ -324,6 +330,7 @@ export const indexingService = {
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             entry.proposed_by = proposer.id;
             entry.proposed_at = blockEntity.id;
+            entry.modified_at = blockEntity.id;
 
             if (!bountyEntry) {
                 bountyRepository.insert(entry);
@@ -334,6 +341,7 @@ export const indexingService = {
                 bountyEntry.chain_id = entry.chain_id;
                 bountyEntry.proposed_by = entry.proposed_by;
                 bountyEntry.proposed_at = entry.proposed_at;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) bountyEntry.status = entry.status;
                 bountyRepository.update(bountyEntry);
             }
         }
@@ -350,6 +358,7 @@ export const indexingService = {
                 tpEntry.value = parseFloat(args.value.replace(/,/g, ""));
                 tpEntry.proposed_by = proposer.id;
                 tpEntry.proposed_at = blockEntity.id;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tpEntry.modified_at)) tpEntry.status = TreasuryProposalStatus.Proposed;
                 treasuryProposalRepository.update(tpEntry);
             } else {
                 const tp = <TreasuryProposalEntity>{
@@ -358,7 +367,8 @@ export const indexingService = {
                     chain_id: chain.id,
                     status: TreasuryProposalStatus.Proposed,
                     proposed_by: proposer.id,
-                    proposed_at: blockEntity.id
+                    proposed_at: blockEntity.id,
+                    modified_at: blockEntity.id
                 };
                 treasuryProposalRepository.insert(tp);
             }
@@ -381,17 +391,21 @@ export const indexingService = {
             const voteThreshold = JSON.parse(JSON.stringify(democracyStartedEvent.data))[1];
             let proposalId: number | null;
 
-            if(democracyTabledEvent) {
+            if (democracyTabledEvent) {
                 const proposal = await proposalRepository.getByProposalIndexAndChainId(JSON.parse(JSON.stringify(democracyTabledEvent.data))[0], chain.id);
                 if (!proposal) {
                     const proposalEntity = <ProposalEntity>{
                         proposal_index: JSON.parse(JSON.stringify(democracyTabledEvent.data))[0]!,
                         chain_id: chain.id,
-                        status: ProposalStatus.Tabled
+                        status: ProposalStatus.Tabled,
+                        modified_at: blockEntity.id
                     };
                     const proposalEntry = await proposalRepository.insert(proposalEntity);
                     proposalId = proposalEntry.id;
                 } else {
+                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) proposal.status = ProposalStatus.Tabled;
+                    proposal.modified_at = blockEntity.id;
+                    proposalRepository.update(proposal);
                     proposalId = proposal.id;
                 }
             } else proposalId = null;
@@ -404,13 +418,16 @@ export const indexingService = {
                     vote_threshold: voteThreshold,
                     status: ReferendumStatus.Started,
                     started_at: blockEntity.id,
-                    proposal_id: proposalId
+                    proposal_id: proposalId,
+                    modified_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
                 referendum.started_at = blockEntity.id;
                 referendum.vote_threshold = voteThreshold;
-                if(proposalId) referendum.proposal_id = proposalId;
+                if (proposalId) referendum.proposal_id = proposalId;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) referendum.status = ReferendumStatus.Started;
+                referendum.modified_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
         }
@@ -423,11 +440,13 @@ export const indexingService = {
                     referendum_index: referendum_index,
                     chain_id: chain.id,
                     status: ReferendumStatus.Executed,
-                    ended_at: blockEntity.id
+                    ended_at: blockEntity.id,
+                    modified_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
-                referendum.status = ReferendumStatus.Executed;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) referendum.status = ReferendumStatus.Executed;
+                referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
@@ -440,11 +459,13 @@ export const indexingService = {
                 const referendumEntity: ReferendumEntity = <ReferendumEntity>{
                     referendum_index: referendum_index,
                     chain_id: chain.id,
-                    status: ReferendumStatus.Passed
+                    status: ReferendumStatus.Passed,
+                    modified_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
-                referendum.status = ReferendumStatus.Passed;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) referendum.status = ReferendumStatus.Passed;
+                referendum.modified_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
         }
@@ -457,12 +478,15 @@ export const indexingService = {
                     referendum_index: referendum_index,
                     chain_id: chain.id,
                     status: ReferendumStatus.NotPassed,
-                    ended_at: blockEntity.id
+                    ended_at: blockEntity.id,
+                    modified_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) referendum.status = ReferendumStatus.NotPassed;
                 referendum.status = ReferendumStatus.NotPassed;
                 referendum.ended_at = blockEntity.id;
+                referendum.modified_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
         }
@@ -475,11 +499,13 @@ export const indexingService = {
                     referendum_index: referendum_index,
                     chain_id: chain.id,
                     status: ReferendumStatus.Cancelled,
-                    ended_at: blockEntity.id
+                    ended_at: blockEntity.id,
+                    modified_at: blockEntity.id
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
-                referendum.status = ReferendumStatus.Cancelled;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) referendum.status = ReferendumStatus.Cancelled;
+                referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
@@ -492,11 +518,13 @@ export const indexingService = {
                 const proposalEntity: ProposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
                     proposal_index: proposalIndex,
-                    status: ProposalStatus.Tabled
+                    status: ProposalStatus.Tabled,
+                    modified_at: blockEntity.id
                 };
                 await proposalRepository.insert(proposalEntity);
             } else {
-                proposal.status = ProposalStatus.Tabled;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) proposal.status = ProposalStatus.Tabled;
+                proposal.modified_at = blockEntity.id;
                 proposal.chain_id = chain.id;
                 proposal.proposal_index = proposalIndex;
                 await proposalRepository.update(proposal);
@@ -525,19 +553,25 @@ export const indexingService = {
                 const treasuryEvent = JSON.parse(JSON.stringify(te));
                 const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
                 const existingProposal = await treasuryProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id);
+                const beneficiaryAccount = await accountRepository.getOrCreateAccount(treasuryEvent.data[2], chain.id);
                 if (!existingProposal) {
                     treasuryProposal.status = TreasuryProposalStatus.Awarded;
                     treasuryProposal.proposal_id = treasuryEvent.data[0];
-                    const beneficiaryAccount = await accountRepository.getOrCreateAccount(treasuryEvent.data[2], chain.id);
                     treasuryProposal.beneficiary = beneficiaryAccount.id;
                     treasuryProposal.chain_id = chain.id;
+                    treasuryProposal.modified_at = blockEntity.id;
                     treasuryProposalRepository.insert(treasuryProposal);
+                } else {
+                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, existingProposal.modified_at)) existingProposal.status = TreasuryProposalStatus.Awarded;
+                    treasuryProposal.beneficiary = beneficiaryAccount.id;
+                    existingProposal.modified_at = blockEntity.id;
+                    treasuryProposalRepository.update(existingProposal);
                 }
             }
         }
     },
 
-    async parseClaimBounty(extrinsicEvents: Record<string, AnyJson>[]): Promise<void> {
+    async parseClaimBounty(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
         const claimedEvents = extrinsicEvents.filter(
             (ev: Record<string, AnyJson>) =>
                 ev.section === EventSection.Bounties &&
@@ -552,11 +586,13 @@ export const indexingService = {
                     const bounty = <BountyEntity>{
                         bounty_id: claimEventData[0],
                         status: BountyStatus.Claimed,
-                        chain_id: chain.id
+                        chain_id: chain.id,
+                        modified_at: blockEntity.id
                     };
                     await bountyRepository.insert(bounty);
                 } else {
-                    bountyEntry.status = BountyStatus.Claimed;
+                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) bountyEntry.status = BountyStatus.Claimed;
+                    bountyEntry.modified_at = blockEntity.id;
                     await bountyRepository.update(bountyEntry);
                 }
             }
@@ -572,7 +608,8 @@ export const indexingService = {
         else {
             const councilMotionEntry = <CouncilMotionEntity>{
                 motion_hash: args.proposal,
-                chain_id: chain.id
+                chain_id: chain.id,
+                modified_at: blockEntity.id
             };
             const entry = await councilMotionRepository.insert(councilMotionEntry);
             councilMotionId = entry.id;
@@ -607,6 +644,8 @@ export const indexingService = {
                         tipProposalEntry.motion_hash = motionHash;
                         tipProposalEntry.beneficiary = beneficiary.id;
                         tipProposalEntry.finder = finder.id;
+                        if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tipProposalEntry.modified_at)) tipProposalEntry.status = TipProposalStatus.Proposed;
+                        tipProposalEntry.modified_at = blockEntity.id;
                         await tipProposalRepository.update(tipProposalEntry);
                     } else if (!tipProposalEntry) {
                         const tipProposal = <TipProposalEntity>{
@@ -616,7 +655,8 @@ export const indexingService = {
                             status: TipProposalStatus.Proposed,
                             motion_hash: motionHash,
                             beneficiary: beneficiary.id,
-                            finder: finder.id
+                            finder: finder.id,
+                            modified_at: blockEntity.id
                         };
                         await tipProposalRepository.insert(tipProposal);
                     }
@@ -630,9 +670,14 @@ export const indexingService = {
                     const tipProposal = <TipProposalEntity>{
                         motion_hash: motionHash,
                         chain_id: chain.id,
-                        status: TipProposalStatus.Retracted
+                        status: TipProposalStatus.Retracted,
+                        modified_at: blockEntity.id
                     };
                     await tipProposalRepository.insert(tipProposal);
+                } else {
+                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tipProposalEntry.modified_at)) tipProposalEntry.status = TipProposalStatus.Retracted;
+                    tipProposalEntry.modified_at = blockEntity.id;
+                    await tipProposalRepository.update(tipProposalEntry);
                 }
                 break;
             }
@@ -646,11 +691,13 @@ export const indexingService = {
                             motion_hash: motionHash,
                             chain_id: chain.id,
                             status: TipProposalStatus.Closed,
-                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, ""))
+                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, "")),
+                            modified_at: blockEntity.id
                         };
                         tipProposalRepository.insert(tipProposal);
                     } else if (tipProposalEntry) {
-                        tipProposalEntry.status = TipProposalStatus.Closed;
+                        if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tipProposalEntry.modified_at)) tipProposalEntry.status = TipProposalStatus.Closed;
+                        tipProposalEntry.modified_at = blockEntity.id;
                         tipProposalEntry.value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, ""));
                         tipProposalEntry.chain_id = chain.id;
                         await tipProposalRepository.update(tipProposalEntry);
@@ -668,13 +715,13 @@ export const indexingService = {
                 } else {
                     const tipProposal = <TipProposalEntity>{
                         motion_hash: motionHash,
-                        chain_id: chain.id
+                        chain_id: chain.id,
+                        modified_at: blockEntity.id
                     };
                     const insertedTipProposal = await tipProposalRepository.insert(tipProposal);
                     tip.tip_proposal_id = insertedTipProposal.id;
                 }
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-
                 tip.tipper = account.id;
                 tip.value = parseFloat(args.tip_value.replace(/,/g, ""));
                 tip.tipped_at = blockEntity.id;
@@ -698,7 +745,8 @@ export const indexingService = {
                     proposal_index: proposal_index,
                     status: ProposalStatus.Proposed,
                     proposed_at: blockEntity.id,
-                    motion_hash: JSON.parse(JSON.stringify(args.proposal_hash))
+                    motion_hash: JSON.parse(JSON.stringify(args.proposal_hash)),
+                    modified_at: blockEntity.id
                 };
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 proposalEntity.proposed_by = account.id;
@@ -709,6 +757,8 @@ export const indexingService = {
                 proposal.motion_hash = JSON.parse(JSON.stringify(args.proposal_hash));
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 proposal.proposed_by = account.id;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) proposal.status = ProposalStatus.Proposed;
+                proposal.modified_at = blockEntity.id;
                 await proposalRepository.update(proposal);
             }
         }
@@ -717,7 +767,7 @@ export const indexingService = {
     /*
         this function decodes the encoded_proposal and gets the call for a proposal
     */
-    async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any): Promise<void> {
+    async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         let decoded_proposal: Record<string, AnyJson> = {};
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
@@ -731,11 +781,11 @@ export const indexingService = {
                 } catch (e) {
                     console.warn(e);
                 }
-            }            
+            }
             let preImageMethod = decoded_proposal.method!.toString();
             let preImageSection = decoded_proposal.section!.toString();
 
-            if(!preImageMethod && !preImageSection) {
+            if (!preImageMethod && !preImageSection) {
                 preImageMethod = "ERROR";
                 preImageSection = "ERROR";
             }
@@ -746,6 +796,8 @@ export const indexingService = {
                 proposal.section = preImageSection;
                 proposal.method = preImageMethod;
                 proposal.proposed_by = account.id;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) proposal.status = ProposalStatus.Proposed;
+                proposal.modified_at = blockEntity.id;
                 proposalRepository.update(proposal);
             } else {
                 const proposalEntity = <ProposalEntity>{
@@ -753,7 +805,9 @@ export const indexingService = {
                     motion_hash: proposal_hash,
                     section: preImageSection,
                     method: preImageMethod,
-                    proposed_by: account.id
+                    proposed_by: account.id,
+                    modified_at: blockEntity.id,
+                    status: ProposalStatus.Proposed
                 };
                 proposalRepository.insert(proposalEntity);
             }
@@ -778,7 +832,8 @@ export const indexingService = {
                 const proposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
                     proposal_index: proposal_index,
-                    status: ProposalStatus.Proposed
+                    status: ProposalStatus.Proposed,
+                    modified_at: blockEntity.id
                 };
                 const insertedProposal = await proposalRepository.insert(proposalEntity);
                 endorsement.proposal_id = insertedProposal.id;
@@ -789,8 +844,6 @@ export const indexingService = {
             const endorsementEntry = await endorsementRepository.getByProposalIdAndEndorser(endorsement.endorser, endorsement.proposal_id);
             if (endorsementEntry === undefined) {
                 await endorsementRepository.insert(endorsement);
-            } else {
-                await endorsementRepository.update(endorsement);
             }
         }
     },
@@ -821,7 +874,8 @@ export const indexingService = {
             if (referendum === undefined) {
                 const referendumEntity = <ReferendumEntity>{
                     referendum_index: vote.referendum_id,
-                    chain_id: chain.id
+                    chain_id: chain.id,
+                    modified_at: blockEntity.id
                 };
                 const insertedReferendum = await referendumRepository.insert(referendumEntity);
                 vote.referendum_id = insertedReferendum.id;

@@ -8,4 +8,5 @@ export interface BountyEntity {
     description: string;
     proposed_at: number;
     proposed_by: number;
+    modified_at: number;
 }

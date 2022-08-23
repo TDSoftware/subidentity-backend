@@ -10,5 +10,7 @@ CREATE TABLE referendum (
     status VARCHAR(255),
     chain_id INT(11) UNSIGNED,
     FOREIGN KEY (chain_id) REFERENCES chain(id),
-    vote_threshold VARCHAR(255)
+    vote_threshold VARCHAR(255),
+    modified_at BIGINT UNSIGNED,
+    FOREIGN KEY (modified_at) REFERENCES block(id)
 )

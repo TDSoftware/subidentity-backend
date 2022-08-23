@@ -9,4 +9,5 @@ export interface CouncilMotionEntity {
     status: string;
     from_block: number;
     to_block: number;
+    modified_at: number;
 }
