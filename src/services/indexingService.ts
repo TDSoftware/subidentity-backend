@@ -248,7 +248,7 @@ export const indexingService = {
             if (!bountyEntry) {
                 bountyRepository.insert(bounty);
             } else {
-                if(await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) bountyEntry.status = bounty.status;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) bountyEntry.status = bounty.status;
                 bountyEntry.modified_at = blockEntity.id;
                 bountyRepository.update(bountyEntry);
             }
@@ -799,7 +799,7 @@ export const indexingService = {
                 }
             }
 
-            if(decoded_proposal) {
+            if (decoded_proposal) {
                 preImageMethod = decoded_proposal.method!.toString();
                 preImageSection = decoded_proposal.section!.toString();
             }

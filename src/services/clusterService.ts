@@ -14,8 +14,8 @@ const cpuCores = os.cpus().length;
 
 export const clusterService = {
 
-    retrieveSlots(): void{
-        process.send!({ topic: SLOT});
+    retrieveSlots(): void {
+        process.send!({ topic: SLOT });
     },
 
     incrementCounter(): void {
@@ -45,7 +45,7 @@ export const clusterService = {
                     worker.send({ topic: SLOT, value: slots });
                 }
             });
-            
+
             cron.schedule("0 */30 * * * *", async () => {
                 const chain = await chainRepository.findByWsProvider(endpoint);
                 const indexThreshold = slots.reduce((acc: number[], curr: number[]) => { return acc[1] > curr[1] ? acc : curr })[1];
@@ -59,7 +59,7 @@ export const clusterService = {
 
             console.log("Indexing will commence in " + slots.length + " batches.");
 
-        } else if(cluster.isWorker){
+        } else if (cluster.isWorker) {
             // retrieve slots
             setTimeout(this.retrieveSlots, 100 * cluster.worker!.id);
             process.on("message", (msg: any) => {
