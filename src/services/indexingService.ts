@@ -81,20 +81,14 @@ export const indexingService = {
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
         console.log("Indexing start: " + new Date() + " from: " + from + " to: " + to);
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
-        wsProvider = new WsProvider(wsProviderAddress);
-        wsProvider.on("disconnected", () => {
-            console.log("WsProvider: " + wsProviderAddress + "disconnected. Trying to reconnect...");
-            wsProvider.on("connected", () => {
-                console.log("WsProvider reconnected.");
-            });
-            wsProvider = new WsProvider(wsProviderAddress);
-        });
+        wsProvider = new WsProvider(wsProviderAddress, 1000, {}, 500000);
         api = await ApiPromise.create({ provider: wsProvider });
         const startHash = await api.rpc.chain.getBlockHash(from);
         indexingService.readBlock(startHash.toString(), from, to);
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
+        console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -129,6 +123,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
+        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
