@@ -90,19 +90,12 @@ export const indexingService = {
             wsProvider = new WsProvider(wsProviderAddress);
         });
         api = await ApiPromise.create({ provider: wsProvider });
-        api.on("disconnected", () => {
-            console.log("Disconnected from " + wsProviderAddress + " API. Trying to reconnect...");
-            api.on("connected", () => {
-                console.log("Reconnected to " + wsProviderAddress);
-            });
-            api.connect();
-        });
         const startHash = await api.rpc.chain.getBlockHash(from);
         indexingService.readBlock(startHash.toString(), from, to);
     },
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
-        console.time("BLOCK: " + block.block.header.number.toNumber());
+        //console.time("BLOCK: " + block.block.header.number.toNumber());
         const apiAt = await api.at(blockHash);
         const extrinsics = block.block.extrinsics;
         const blockEvents = await apiAt.query.system.events();
@@ -126,7 +119,7 @@ export const indexingService = {
             const extrinsicEvents = blockEvents.filter((e: FrameSystemEventRecord) => e.phase.toString() != ExtrinsicPhase.INITIALIZATION && e.phase.toString() != ExtrinsicPhase.FINALIZATION && e.phase.asApplyExtrinsic.toNumber() === index).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
             if (extrinsicEvents.some((ev: Record<string, AnyJson>) => ev.section === EventSection.System && ev.method === EventMethod.ExtrinsicFailed)) return;
 
-            if (extrinsicSection === ExtrinsicSection.PROXY && extrinsicMethod === ExtrinsicMethod.PROXY) {
+            if ((extrinsicSection === ExtrinsicSection.PROXY && (extrinsicMethod === ExtrinsicMethod.PROXY_ANNOUNCED || ExtrinsicMethod.PROXY))) {
                 extrinsic = extrinsic.method.args.call;
                 if (extrinsic) {
                     extrinsicMethod = extrinsic.method;
@@ -137,7 +130,7 @@ export const indexingService = {
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
-        console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
+        //console.timeEnd("BLOCK: " + block.block.header.number.toNumber());
     },
 
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -171,6 +164,7 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.UTILITY):
                 if (extrinsicMethod === ExtrinsicMethod.BATCH) await this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.BATCHALL) await this.parseUtilityBatch(extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
                 break;
         }
     },
@@ -206,10 +200,8 @@ export const indexingService = {
             if (!councilMotionEntry) {
                 councilMotionRepository.insert(councilMotion);
             } else if (councilMotionEntry) {
-                councilMotionEntry.motion_hash = councilMotion.motion_hash;
                 councilMotionEntry.proposal_index = councilMotion.proposal_index;
                 councilMotionEntry.to_block = councilMotion.to_block;
-                councilMotionEntry.chain_id = councilMotion.chain_id;
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, councilMotionEntry.modified_at)) {
                     councilMotionEntry.status = councilMotion.status;
                     councilMotionEntry.modified_at = blockEntity.id;
@@ -291,17 +283,22 @@ export const indexingService = {
                     status: CouncilMotionStatus.Proposed,
                     modified_at: blockEntity.id
                 };
-                councilMotionEntry = await councilMotionRepository.insert(councilMotion);
+                await councilMotionRepository.insert(councilMotion);
             }
 
             if (proposal.method === ExtrinsicMethod.APPROVEPROPOSAL && proposal.section === ExtrinsicSection.TREASURY) {
                 const proposalID = proposal.args.proposal_id;
                 const proposalEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
-                councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
-
+                if(councilMotionEntry) {
+                    proposalEntry.council_motion_id = councilMotionEntry.id;
+                }
                 if (proposalEntry) {
-                    if (councilMotionEntry) {
-                        proposalEntry.council_motion_id = councilMotionEntry.id;
+                    if(await blockRepository.hasHigherBlockNumber(blockEntity.id, proposalEntry.modified_at)) {
+                        if (extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Awarded && e.section === EventSection.Treasury)) {
+                            proposalEntry.status = TreasuryProposalStatus.Awarded;
+                        } else {
+                            proposalEntry.status = TreasuryProposalStatus.Proposed;
+                        } 
                         await treasuryProposalRepository.update(proposalEntry);
                     }
                 } else if (!proposalEntry) {
@@ -313,13 +310,8 @@ export const indexingService = {
                     } else {
                         treasuryProposal.status = TreasuryProposalStatus.Proposed;
                     }
-
                     treasuryProposal.chain_id = chain.id;
                     treasuryProposal.modified_at = blockEntity.id;
-
-                    if (councilMotionEntry) {
-                        treasuryProposal.council_motion_id = councilMotionEntry.id;
-                    }
                     treasuryProposalRepository.insert(treasuryProposal);
                 }
             }
@@ -341,7 +333,7 @@ export const indexingService = {
 
             entry.bounty_id = bountyId;
             entry.description = String(args.description);
-            entry.value = parseFloat(args.value.replace(/,/g, ""));
+            entry.value = parseFloat(args.value.replace(/,/g, "."));
             entry.chain_id = chain.id;
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             entry.proposed_by = proposer.id;
@@ -374,7 +366,7 @@ export const indexingService = {
             const tpEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             if (tpEntry) {
-                tpEntry.value = parseFloat(args.value.replace(/,/g, ""));
+                tpEntry.value = parseFloat(args.value.replace(/,/g, "."));
                 tpEntry.proposed_by = proposer.id;
                 tpEntry.proposed_at = blockEntity.id;
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tpEntry.modified_at)) {
@@ -385,7 +377,7 @@ export const indexingService = {
             } else {
                 const tp = <TreasuryProposalEntity>{
                     proposal_id: proposalId,
-                    value: parseFloat(args.value.replace(/,/g, "")),
+                    value: parseFloat(args.value.replace(/,/, ".")),
                     chain_id: chain.id,
                     status: TreasuryProposalStatus.Proposed,
                     proposed_by: proposer.id,
@@ -648,12 +640,12 @@ export const indexingService = {
         let existingVote = <any>{};
         if (councilMotionEntry) councilMotionId = councilMotionEntry.id;
         else {
-            const councilMotionEntry = <CouncilMotionEntity>{
+            const councilMotion = <CouncilMotionEntity>{
                 motion_hash: args.proposal,
                 chain_id: chain.id,
                 modified_at: blockEntity.id
             };
-            const entry = await councilMotionRepository.insert(councilMotionEntry);
+            const entry = await councilMotionRepository.insert(councilMotion);
             councilMotionId = entry.id;
         }
         existingVote = await councilMotionVoteRepository.getByCouncilMotionIdAndAccountId(councilMotionId, account.id);
@@ -737,7 +729,7 @@ export const indexingService = {
                             motion_hash: motionHash,
                             chain_id: chain.id,
                             status: TipProposalStatus.Closed,
-                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, "")),
+                            value: parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/, ".")),
                             modified_at: blockEntity.id
                         };
                         tipProposalRepository.insert(tipProposal);
@@ -746,7 +738,7 @@ export const indexingService = {
                             tipProposalEntry.status = TipProposalStatus.Closed;
                             tipProposalEntry.modified_at = blockEntity.id;
                         }
-                        tipProposalEntry.value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, ""));
+                        tipProposalEntry.value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/, "."));
                         tipProposalEntry.chain_id = chain.id;
                         await tipProposalRepository.update(tipProposalEntry);
                     }
@@ -819,7 +811,7 @@ export const indexingService = {
         this function decodes the encoded_proposal and gets the call for a proposal
     */
     async parseDemocracyPreimageNoted(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
-        let decoded_proposal: Record<string, AnyJson> = {};
+        let decoded_proposal: Record<string, AnyJson> | null= null;
         const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
         if (preImageEvent) {
             let preImageMethod: string = <string>{};
@@ -836,11 +828,10 @@ export const indexingService = {
                     console.warn(e);
                 }
             }
-
             if (decoded_proposal) {
-                preImageMethod = JSON.parse(JSON.stringify(decoded_proposal.method));
-                preImageSection = JSON.parse(JSON.stringify(decoded_proposal.method));
-            } else if(decoded_proposal === undefined) {
+                preImageMethod = JSON.parse(JSON.stringify(decoded_proposal!.method));
+                preImageSection = JSON.parse(JSON.stringify(decoded_proposal!.section));
+            } else if(!decoded_proposal) {
                 preImageMethod = "ERROR";
                 preImageSection = "ERROR";
             }
@@ -918,7 +909,7 @@ export const indexingService = {
             const vote = <ReferendumVoteEntity>{
                 referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
                 vote: voteDetails.vote.vote === Vote.Aye,
-                locked_value: parseFloat(voteDetails.balance.replace(/,/g, "")),
+                locked_value: parseFloat(voteDetails.balance.replace(/,/, ".")),
                 voted_at: blockEntity.id
             };
 

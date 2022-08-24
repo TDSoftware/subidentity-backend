@@ -49,11 +49,14 @@ export const clusterService = {
             cron.schedule("0 */30 * * * *", async () => {
                 const chain = await chainRepository.findByWsProvider(endpoint);
                 const indexThreshold = slots.reduce((acc: number[], curr: number[]) => { return acc[1] > curr[1] ? acc : curr })[1];
+                console.log("Checking if indexing for " + chain!.chain_name + " has finished...");
                 const orphanBlocks = await blockRepository.getOrphanBlocksUnderBlockNumber(indexThreshold, chain!.id);
                 if (!orphanBlocks) {
                     chain!.status = ChainStatus.Indexed;
                     chainRepository.update(chain!);
                     console.log("Chain " + chain!.chain_name + " is now indexed. You can close this window.");
+                } else {
+                    console.log("Chain " + chain!.chain_name + " is still indexing in " + orphanBlocks.length + " batches.");
                 }
             });
 
