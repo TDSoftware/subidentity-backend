@@ -76,7 +76,9 @@ export const clusterService = {
             process.on("message", (msg: any) => {
                 if (msg.topic === COUNTER) {
                     if (msg.value <= slots.length) {
-                        indexingService.indexChain(endpoint, slots[msg.value][1], slots[msg.value][0]);
+                        const from = slots[msg.value][1];
+                        const to = slots[msg.value][0];
+                        indexingService.indexChain(endpoint, from, to);
                     }
                 }
             });

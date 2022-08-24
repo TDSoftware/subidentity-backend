@@ -13,13 +13,13 @@ class BlockRepository extends MySQLRepository<BlockEntity> {
     }
     
     async existsByBlockHash(blockHash: string): Promise<boolean> {
-        const query = `SELECT COUNT(*) as amount FROM ${this.tableName} WHERE ${this.tableName}.hash = "${blockHash}"`;
-        const [{amount}] = await runSelectQuery<{amount: number}>(query);
-        return amount > 0;
+        const query = `SELECT EXISTS(SELECT hash FROM ${this.tableName} WHERE ${this.tableName}.hash = "${blockHash}") as exist`;
+        const [{exist}] = await runSelectQuery<{exist: number}>(query);
+        return exist > 0;
     }
 
     async getBlockCount(chainId: number): Promise<number> {
-        const query = `SELECT COUNT(*) as amount FROM ${this.tableName} WHERE ${this.tableName}.chain_id = ${chainId}`;
+        const query = `SELECT COUNT(hash) as amount FROM ${this.tableName} WHERE ${this.tableName}.chain_id = ${chainId}`;
         const [{amount}] = await runSelectQuery<{amount: number}>(query);
         return amount;
     }
