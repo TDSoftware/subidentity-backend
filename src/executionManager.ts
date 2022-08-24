@@ -8,8 +8,10 @@ import { Header } from "@polkadot/types/interfaces";
 import { blockRepository } from "./repositories/blockRepository";
 import { chainService } from "./services/chainService";
 import { clusterService } from "./services/clusterService";
+import os from "os";
 
 let chain: ChainEntity;
+const cpuCores = os.cpus().length;
 const args = minimist(process.argv.slice(2));
 
 export const executionManager = {
@@ -51,9 +53,23 @@ export const executionManager = {
             const toNum: number = firstBlockWithLowerNumber === undefined ? 0 : firstBlockWithLowerNumber.number + 1;
             slotsWithNext.push([toNum, orphanBlocks[i].number]);
         }
+        while (slotsWithNext.length < cpuCores) {
+            this.splitSlots(slotsWithNext);
+        }
+        return slotsWithNext;
+    },
+
+    // we split them because in the end there might be less slots because some finished and some were slower (potentially due to crashes etc.)
+    // we always want to utilize our cpu cores to the fullest, so we split the biggest slots until we have the same amount of slots as cpu cores
+    splitSlots(slotsWithNext: number[][]): number[][] {
+        slotsWithNext.sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
+        const biggestSlot: any = slotsWithNext[0];
+        const slotSpan = biggestSlot[1] - biggestSlot[0];
+        const newSlot = [biggestSlot[0], biggestSlot[0] + Math.round(slotSpan / 2)];
+        slotsWithNext.push(newSlot);
+        slotsWithNext[0] = [newSlot[1] + 1, biggestSlot[1]];
         return slotsWithNext;
     }
 };
 
-// for indexing
 clusterService.indexSlots(args.endpoint);

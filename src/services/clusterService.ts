@@ -56,7 +56,7 @@ export const clusterService = {
                     chainRepository.update(chain!);
                     console.log("Chain " + chain!.chain_name + " is now indexed. You can close this window.");
                 } else {
-                    console.log("Chain " + chain!.chain_name + " is still indexing in " + orphanBlocks.length + " batches.");
+                    console.log("Chain " + chain!.chain_name + " is still indexing.");
                 }
             });
 
