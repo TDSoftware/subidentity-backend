@@ -35,7 +35,7 @@ export const executionManager = {
             }
             for (let i = 0; i < slots.length; i++) {
                 const nextSlot = i + 1 < slots.length ? slots[i + 1] : latestBlock;
-                slotsWithNext.push([slots[i], nextSlot - 1]);
+                slotsWithNext.push([slots[i] === 0 ? 1 : slots[i], nextSlot - 1]);
             }
         } else if (blockCount > 0) {
             slotsWithNext = await this.recalculateSlots();
@@ -50,7 +50,7 @@ export const executionManager = {
         const orphanBlocks = await blockRepository.getOrphanBlocks(chain.id);
         for (let i = 0; i < orphanBlocks.length; i++) {
             const firstBlockWithLowerNumber = await blockRepository.getFirstBlockWithLowerNumber(orphanBlocks[i].number, chain.id);
-            const toNum: number = firstBlockWithLowerNumber === undefined ? 0 : firstBlockWithLowerNumber.number + 1;
+            const toNum: number = firstBlockWithLowerNumber === undefined ? 1 : firstBlockWithLowerNumber.number + 1;
             slotsWithNext.push([toNum, orphanBlocks[i].number]);
         }
         while (slotsWithNext.length < cpuCores) {
@@ -63,7 +63,7 @@ export const executionManager = {
     // we always want to utilize our cpu cores to the fullest, so we split the biggest slots until we have the same amount of slots as cpu cores
     splitSlots(slotsWithNext: number[][]): number[][] {
         slotsWithNext.sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
-        const biggestSlot: any = slotsWithNext[0];
+        const biggestSlot: number[] = slotsWithNext[0];
         const slotSpan = biggestSlot[1] - biggestSlot[0];
         const newSlot = [biggestSlot[0], biggestSlot[0] + Math.round(slotSpan / 2)];
         slotsWithNext.push(newSlot);

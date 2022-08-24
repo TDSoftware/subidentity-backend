@@ -257,7 +257,7 @@ export const indexingService = {
         if (proposeEvent) {
             const proposalIndex = JSON.parse(JSON.stringify(proposeEvent)).data[1];
             const councilMotionHash = JSON.parse(JSON.stringify(proposeEvent)).data[2];
-            let councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
+            const councilMotionEntry = await councilMotionRepository.getByMotionHash(councilMotionHash);
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
             if (councilMotionEntry) {
