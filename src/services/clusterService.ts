@@ -73,12 +73,13 @@ export const clusterService = {
 
             // retrieve counter to know which slot the worker should use
             setTimeout(this.incrementCounter, 100 * cluster.worker!.id);
-            process.on("message", (msg: any) => {
+            process.on("message", async (msg: any) => {
                 if (msg.topic === COUNTER) {
                     if (msg.value <= slots.length) {
                         const from = slots[msg.value][1];
                         const to = slots[msg.value][0];
-                        indexingService.indexChain(endpoint, from, to);
+                        console.log("[Worker " + cluster.worker?.id + "]: Indexing start: " + new Date() + " from: " + from + " to: " + to);
+                        await indexingService.indexChain(endpoint, from, to);
                     }
                 }
             });

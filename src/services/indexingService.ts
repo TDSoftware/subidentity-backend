@@ -61,7 +61,7 @@ export const indexingService = {
             console.log(new Date());
             return;
         }
-        indexingService.parseBlock(block, blockHash);
+        await indexingService.parseBlock(block, blockHash);
     },
 
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
@@ -79,7 +79,6 @@ export const indexingService = {
     },
 
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
-        console.log("Indexing start: " + new Date() + " from: " + from + " to: " + to);
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress, 1000, {}, 500000);
         api = await ApiPromise.create({ provider: wsProvider });
@@ -89,13 +88,14 @@ export const indexingService = {
 
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         console.time("BLOCK: " + block.block.header.number.toNumber());
-        const apiAt = await api.at(blockHash);
-        const extrinsics = block.block.extrinsics;
-        const blockEvents = await apiAt.query.system.events();
-
+        
         let blockEntity = <BlockEntity>{};
         if (await blockRepository.existsByBlockHash(blockHash)) return;
         else blockEntity = await blockRepository.insert(blockMapper.toInsertEntity(blockHash, block.block.header.number.toNumber(), chain.id, false, ""));
+
+        const apiAt = await api.at(blockHash);
+        const extrinsics = block.block.extrinsics;
+        const blockEvents = await apiAt.query.system.events();
 
         for (let index = 0; index < extrinsics.length; index++) {
             const ex = extrinsics[index];
