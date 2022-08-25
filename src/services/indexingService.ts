@@ -372,13 +372,13 @@ export const indexingService = {
 
             let value: number = <number>{};
             if (String(args.value).includes("k" + chain.token_symbol!)) {
-                tpEntry.value = parseFloat(args.value) * 1000;
+                value = parseFloat(args.value) * 1000;
             } else if (String(args.value).includes("m" + chain.token_symbol!)) {
                 value = parseFloat(args.value) / 1000;
             } else if (String(args.value).includes(chain.token_symbol!)) {
-                tpEntry.value = parseFloat(args.value);
+                value = parseFloat(args.value);
             } else {
-                tpEntry.value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
             }
 
             if (tpEntry) {
