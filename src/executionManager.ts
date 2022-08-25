@@ -62,7 +62,7 @@ export const executionManager = {
     // we split them because in the end there might be less slots because some finished and some were slower (potentially due to crashes etc.)
     // we always want to utilize our cpu cores to the fullest, so we split the biggest slots until we have the same amount of slots as cpu cores
     splitSlots(slotsWithNext: number[][]): number[][] {
-        slotsWithNext.sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
+        slotsWithNext.sort((a: number[], b: number[]) => b[1] - b[0] - (a[1] - a[0]));
         const biggestSlot: number[] = slotsWithNext[0];
         const slotSpan = biggestSlot[1] - biggestSlot[0];
         const newSlot = [biggestSlot[0], biggestSlot[0] + Math.round(slotSpan / 2)];

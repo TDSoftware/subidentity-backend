@@ -37,11 +37,11 @@ export const clusterService = {
             cluster.on("exit", async (worker: any) => {
                 console.log("Worker " + worker.id + " died.");
                 if(crashedWorkerCount === (cpuCores - minimumWorkerThreshold)) {
-                    for (var id in cluster.workers) {
-                        console.log("Shutting down cluster and restarting...")
+                    for (const id in cluster.workers) {
+                        console.log("Shutting down cluster and restarting...");
                         cluster.workers[id]!.kill();
                     }
-                    slots = await executionManager.createSlots(endpoint, cpuCores);
+                    this.indexSlots(endpoint);
                 }
             });
 

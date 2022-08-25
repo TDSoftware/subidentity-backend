@@ -283,9 +283,6 @@ export const indexingService = {
                 const proposalID = proposal.args.proposal_id;
                 const proposalEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalID, chain.id);
                 if (proposalEntry) {
-                    if(councilMotionEntry) {
-                        proposalEntry.council_motion_id = councilMotionEntry.id;
-                    }
                     if(await blockRepository.hasHigherBlockNumber(blockEntity.id, proposalEntry.modified_at)) {
                         if (extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Awarded && e.section === EventSection.Treasury)) {
                             proposalEntry.status = TreasuryProposalStatus.Awarded;

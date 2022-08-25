@@ -40,8 +40,8 @@ class BlockRepository extends MySQLRepository<BlockEntity> {
     }
 
     async hasHigherBlockNumber(firstBlockId: number, secondBlockId: number): Promise<boolean> {
-        const firstQuery: string = `SELECT number FROM ${this.tableName} WHERE ${this.tableName}.id = ${firstBlockId}`;
-        const secondQuery: string = `SELECT number FROM ${this.tableName} WHERE ${this.tableName}.id = ${secondBlockId}`;
+        const firstQuery = `SELECT number FROM ${this.tableName} WHERE ${this.tableName}.id = ${firstBlockId}`;
+        const secondQuery = `SELECT number FROM ${this.tableName} WHERE ${this.tableName}.id = ${secondBlockId}`;
         return (await runSelectQuery<number>(firstQuery))[0] > (await runSelectQuery<number>(secondQuery))[0];
     }
 

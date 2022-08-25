@@ -1,7 +1,5 @@
 CREATE TABLE treasury_proposal (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    council_motion_id BIGINT UNSIGNED,
-    FOREIGN KEY (council_motion_id) REFERENCES council_motion(id),
     chain_id INT(11) UNSIGNED,
     FOREIGN KEY (chain_id) REFERENCES chain(id),
     proposal_id INT(11),

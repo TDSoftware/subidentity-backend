@@ -1,6 +1,5 @@
 export interface BountyEntity {
     id: number;
-    council_motion_id: number;
     chain_id: number;
     bounty_id: number
     status: string;
