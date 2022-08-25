@@ -1,5 +1,8 @@
 export enum ProposalStatus {
     Proposed = "PROPOSED",
     Tabled = "TABLED",
-    Cancelled = "CANCELLED"
+    Cancelled = "CANCELLED",
+    Approved = "APPROVED",
+    Disapproved = "DISAPPROVED",
+    Executed = "EXECUTED"
 }

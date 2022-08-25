@@ -5,7 +5,7 @@ CREATE TABLE treasury_proposal (
     proposal_id INT(11),
     proposed_at BIGINT UNSIGNED,
     FOREIGN KEY (proposed_at) REFERENCES block(id),
-    value BIGINT,
+    value FLOAT(12),
     status VARCHAR(255),
     proposed_by INT(11) UNSIGNED,
     FOREIGN KEY (proposed_by) REFERENCES account(id),

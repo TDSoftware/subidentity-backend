@@ -7,5 +7,6 @@ export enum ExtrinsicSection {
     PROXY = "proxy",
     MULTISIG = "multisig",
     TIPS = "tips",
-    UTILITY = "utility"
+    UTILITY = "utility",
+    TECHNICALCOMMITTEE = "technicalCommittee",
 }

@@ -4,7 +4,7 @@ CREATE TABLE bounty (
     FOREIGN KEY (chain_id) REFERENCES chain(id),
     bounty_id INT(11),
     status VARCHAR(255),
-    value BIGINT,
+    value FLOAT(12),
     description VARCHAR(255),
     proposed_at BIGINT UNSIGNED,
     FOREIGN KEY (proposed_at) REFERENCES block(id),
