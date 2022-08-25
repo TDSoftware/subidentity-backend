@@ -11,6 +11,7 @@ const INCREMENT = "INCREMENT";
 const COUNTER = "COUNTER";
 const SLOT = "SLOT";
 const cpuCores = os.cpus().length;
+const minimumWorkerThreshold = Math.round(cpuCores * 0.75);
 
 export const clusterService = {
 
@@ -32,8 +33,16 @@ export const clusterService = {
                 cluster.fork();
             }
 
-            cluster.on("exit", (worker: any) => {
+            const crashedWorkerCount = 0;
+            cluster.on("exit", async (worker: any) => {
                 console.log("Worker " + worker.id + " died.");
+                if(crashedWorkerCount === (cpuCores - minimumWorkerThreshold)) {
+                    for (var id in cluster.workers) {
+                        console.log("Shutting down cluster and restarting...")
+                        cluster.workers[id]!.kill();
+                    }
+                    slots = await executionManager.createSlots(endpoint, cpuCores);
+                }
             });
 
             cluster.on("message", (worker: any, msg: any) => {
