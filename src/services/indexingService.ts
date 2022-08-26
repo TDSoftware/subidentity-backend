@@ -54,6 +54,10 @@ let api: ApiPromise;
 
 export const indexingService = {
 
+    /*
+    * getting the block and if the block number is bigger than "to", repeat
+    * calling the parseBlock function
+    */
     async readBlock(blockHash: string, from: number, to: number): Promise<void> {
         const block = await api.rpc.chain.getBlock(blockHash);
         if (block.block.header.number.toNumber() >= to) indexingService.readBlock(block.block.header.parentHash.toString(), from, to);
@@ -64,6 +68,11 @@ export const indexingService = {
         await indexingService.parseBlock(block, blockHash);
     },
 
+    /*
+    * This function calls the parseExtrinsic function for a given block.
+    * Errors are caught and logged to the database entry of the block in which the error occured.
+    * After indexing, it might make sense to check if any errors occured.
+    */
     async parseBlock(block: SignedBlock, blockHash: string): Promise<void> {
         try {
             await indexingService.parseExtrinsic(block, blockHash);
@@ -78,6 +87,9 @@ export const indexingService = {
         }
     },
 
+    /*
+    * Initializing the connection to the node and getting the hast of the initial indexing block
+    */
     async indexChain(wsProviderAddress: string, from: number, to: number): Promise<void> {
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress, 1000, {}, 500000);
@@ -90,7 +102,9 @@ export const indexingService = {
     /*
     * This function parses the every extrinsic of the given block and calls the the parseMethodAndSection function at the end.
     * The indexer in general works by getting the latest block and indexing backwards by getting parent hashes.
-    * The clusterService seperates the total block range into several batches, depending on the number of cpu cores available.
+    * The clusterService seperates the total block range into several batches, depending on the number of cpu cores available to increase efficiency.
+    * The data is fetched from the polkadot js api and then saved to the database.
+    * We get the data through the extrinsic and event records of the block.
     */
     async parseExtrinsic(block: SignedBlock, blockHash: string): Promise<void> {
         console.time("BLOCK: " + block.block.header.number.toNumber());
@@ -124,7 +138,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the extrinsic section and method and calls the appropriate function to handle them.
+    * This function asynchronously parses the extrinsic section and method and calls the appropriate function to handle them.
     */
     async parseMethodAndSection(extrinsicSection: string, extrinsicMethod: string, extrinsic: any, extrinsicEvents: Record<string, AnyJson>[], blockEvents: Vec<FrameSystemEventRecord>, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         switch (extrinsicSection) {
@@ -148,7 +162,7 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseMultisigAsMulti(extrinsicSection, extrinsicMethod, extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner)
                 break;
             case (ExtrinsicSection.DEMOCRACY):
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, extrinsic, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
@@ -173,7 +187,7 @@ export const indexingService = {
 
     /*
     * This function extracts the call included in a proxy proxy extrinsic and calls the parseMethodAndSection function to handle the call.
-    */ 
+    */
     async parseProxyProxy(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         if ((extrinsicSection === ExtrinsicSection.MULTISIG && extrinsicMethod === ExtrinsicMethod.ASMULTI)
             || (extrinsicSection === ExtrinsicSection.PROXY && extrinsicMethod === ExtrinsicMethod.PROXY)) {
@@ -209,6 +223,7 @@ export const indexingService = {
 
     /*
     * This function extracts the multiple calls included in a utility batch extrinsic and calls the parseMethodAndSection function to handle each call.
+    * Will also be called for the extrinsic utility batchAll.
     */
     async parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         for (let index = 0; index < args.calls.length; index++) {
@@ -240,8 +255,8 @@ export const indexingService = {
             } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Disapproved)) {
                 councilMotion.status = CouncilMotionStatus.Disapproved;
             }
-            
-            if(councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Executed)) {
+
+            if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Executed)) {
                 councilMotion.status = CouncilMotionStatus.Executed;
             }
 
@@ -889,7 +904,7 @@ export const indexingService = {
     /*
     * This function parses the democracy propose extrinsic and creates or updates the corresponding database tables. (proposal)
     */
-    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash))
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
