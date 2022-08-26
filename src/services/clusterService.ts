@@ -12,7 +12,7 @@ const COUNTER = "COUNTER";
 const SLOT = "SLOT";
 const cpuCores = os.cpus().length;
 
-// miminum indexing capacity should be 75% of the cpu cores, can be adjusted based on preference
+// miminum indexing capacity is 75% of the cpu cores, can be adjusted based on preference
 const minimumWorkerThreshold = Math.round(cpuCores * 0.75);
 
 export const clusterService = {
@@ -78,7 +78,7 @@ export const clusterService = {
             console.log("Indexing will commence in " + slots.length + " batches.");
 
         } else if (cluster.isWorker) {
-            // retrieve slots
+            // retrieving the indexing slots via messaging
             setTimeout(this.retrieveSlots, 100 * cluster.worker!.id);
             process.on("message", (msg: any) => {
                 if (msg.topic === SLOT) {
