@@ -20,4 +20,6 @@ export enum ExtrinsicMethod {
     BATCH = "batch",
     NOTEPREIMAGE = "notePreimage",
     SECOND = "second",
+    NOTEIMMINENTPREIMAGE = "noteImminentPreimage",
+    TIPNEW = "tipNew"
 }

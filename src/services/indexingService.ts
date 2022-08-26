@@ -102,8 +102,8 @@ export const indexingService = {
             let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
             let extrinsicMethod = extrinsic.method.method;
             let extrinsicSection = extrinsic.method.section;
+            let args = extrinsic.method.args;
             let extrinsicSigner: string;
-            let args: any;
 
             if (ex.signer) {
                 extrinsicSigner = ex.signer.toString();
@@ -111,15 +111,6 @@ export const indexingService = {
 
             const extrinsicEvents = blockEvents.filter((e: FrameSystemEventRecord) => e.phase.toString() != ExtrinsicPhase.INITIALIZATION && e.phase.toString() != ExtrinsicPhase.FINALIZATION && e.phase.asApplyExtrinsic.toNumber() === index).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
             if (extrinsicEvents.some((ev: Record<string, AnyJson>) => ev.section === EventSection.System && ev.method === EventMethod.ExtrinsicFailed)) return;
-
-            if ((extrinsicSection === ExtrinsicSection.PROXY && (extrinsicMethod === ExtrinsicMethod.PROXY_ANNOUNCED || ExtrinsicMethod.PROXY))) {
-                extrinsic = extrinsic.method.args.call;
-                if (extrinsic) {
-                    extrinsicMethod = extrinsic.method;
-                    extrinsicSection = extrinsic.section;
-                    args = extrinsic.args;
-                }
-            } else args = extrinsic.method.args;
 
             await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
         }
@@ -139,18 +130,20 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.TREASURY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSESPEND) await this.parseTreasuryProposeSpend(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSEBOUNTY) await this.parseProposeBounty(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.TIMESTAMP):
                 if (extrinsicMethod === ExtrinsicMethod.SET) await this.parseTimestampSet(blockEvents, blockEntity);
                 break;
             case (ExtrinsicSection.MULTISIG):
-                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseClaimBounty(extrinsicEvents, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseMultisigAsMulti(extrinsicSection, extrinsicMethod, extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner)
                 break;
             case (ExtrinsicSection.DEMOCRACY):
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, extrinsic, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity);
+                if (extrinsicMethod === ExtrinsicMethod.NOTEIMMINENTPREIMAGE) await this.parseDemocracyPreimageNoted(extrinsicEvents, args, blockEntity);
                 break;
             case (ExtrinsicSection.TIPS):
                 await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
@@ -161,9 +154,42 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.TECHNICALCOMMITTEE):
                 if (extrinsicMethod === ExtrinsicMethod.CLOSE) await this.parseTechnicalCommitteeClose(extrinsicEvents, args, blockEntity);
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseTechnicalCommitteePropose(extrinsicEvents, args, blockEntity, extrinsic, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseTechnicalCommitteePropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                break;
+            case (ExtrinsicSection.PROXY):
+                if (extrinsicMethod === ExtrinsicMethod.PROXY) await this.parseProxyProxy(extrinsicSection, extrinsicMethod, extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
                 break;
         }
+    },
+
+    async parseProxyProxy(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+        if ((extrinsicSection === ExtrinsicSection.MULTISIG && extrinsicMethod === ExtrinsicMethod.ASMULTI)
+            || (extrinsicSection === ExtrinsicSection.PROXY && extrinsicMethod === ExtrinsicMethod.PROXY)) {
+            extrinsic = args.call;
+            extrinsicMethod = extrinsic.method;
+            extrinsicSection = extrinsic.section;
+            args = extrinsic.args;
+        } else {
+            extrinsic = extrinsic.method.args.call;
+            if (extrinsic) {
+                extrinsicMethod = extrinsic.method;
+                extrinsicSection = extrinsic.section;
+                args = extrinsic.args;
+            }
+            else args = extrinsic.method.args;
+        }
+        await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
+    },
+
+    async parseMultisigAsMulti(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+        extrinsic = extrinsic.method.args.call;
+        if (extrinsic) {
+            extrinsicMethod = extrinsic.method;
+            extrinsicSection = extrinsic.section;
+            args = extrinsic.args;
+        }
+        else args = extrinsic.method.args;
+        await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
     },
 
     async parseUtilityBatch(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
@@ -407,7 +433,7 @@ export const indexingService = {
 
     async parseTimestampSet(blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity): Promise<void> {
         const initializationEvents = blockEvents.filter((e: any) => e.phase.toString() === ExtrinsicPhase.INITIALIZATION).map((ev: FrameSystemEventRecord) => ev.event.toHuman());
-        const treasuryEvents = initializationEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.Treasury && e.method === EventMethod.Awarded);
+        const treasuryEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Treasury && e.method === EventMethod.Awarded);
         const newCounciltermEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.PhragmenElection && e.method === EventMethod.NewTerm);
         const democracyTabledEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.Tabled);
         const democracyStartedEvent = initializationEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Democracy && e.method === EventMethod.Started);
@@ -570,58 +596,49 @@ export const indexingService = {
             }
         }
 
-        if (treasuryEvents) {
-            for (let i = 0; i < treasuryEvents.length; i++) {
-                const te = treasuryEvents[i];
-                const treasuryEvent = JSON.parse(JSON.stringify(te));
-                const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
-                const existingProposal = await treasuryProposalRepository.getByProposalIdAndChainId(treasuryEvent.data[0], chain.id);
-                const beneficiaryAccount = await accountRepository.getOrCreateAccount(treasuryEvent.data[2], chain.id);
-                if (!existingProposal) {
-                    treasuryProposal.status = TreasuryProposalStatus.Awarded;
-                    treasuryProposal.proposal_id = treasuryEvent.data[0];
-                    treasuryProposal.beneficiary = beneficiaryAccount.id;
-                    treasuryProposal.chain_id = chain.id;
-                    treasuryProposal.modified_at = blockEntity.id;
-                    treasuryProposalRepository.insert(treasuryProposal);
-                } else {
-                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, existingProposal.modified_at)) {
-                        existingProposal.status = TreasuryProposalStatus.Awarded;
-                        existingProposal.modified_at = blockEntity.id;
-                    }
+        if (treasuryEvent) {
+            const te = JSON.parse(JSON.stringify(treasuryEvent));
+            const treasuryProposal: TreasuryProposalEntity = <TreasuryProposalEntity>{};
+            const existingProposal = await treasuryProposalRepository.getByProposalIdAndChainId(te.data[0], chain.id);
+            const beneficiaryAccount = await accountRepository.getOrCreateAccount(te.data[2], chain.id);
+            if (!existingProposal) {
+                treasuryProposal.status = TreasuryProposalStatus.Awarded;
+                treasuryProposal.proposal_id = te.data[0];
+                treasuryProposal.beneficiary = beneficiaryAccount.id;
+                treasuryProposal.chain_id = chain.id;
+                treasuryProposal.modified_at = blockEntity.id;
+                treasuryProposalRepository.insert(treasuryProposal);
+            } else {
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, existingProposal.modified_at)) {
+                    existingProposal.status = TreasuryProposalStatus.Awarded;
                     existingProposal.modified_at = blockEntity.id;
-                    treasuryProposalRepository.update(existingProposal);
                 }
+                existingProposal.beneficiary = beneficiaryAccount.id;
+                treasuryProposalRepository.update(existingProposal);
             }
         }
     },
 
     async parseClaimBounty(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
-        const claimedEvents = extrinsicEvents.filter(
-            (ev: Record<string, AnyJson>) =>
-                ev.section === EventSection.Bounties &&
-                ev.method === EventMethod.BountyClaimed
-        );
-        if (claimedEvents) {
-            for (let i = 0; i < claimedEvents.length; i++) {
-                const ce = claimedEvents[i];
-                const claimEventData = JSON.parse(JSON.stringify(ce.data));
-                const bountyEntry = await bountyRepository.getByBountyIdAndChainId(claimEventData[0], chain.id);
-                if (!bountyEntry) {
-                    const bounty = <BountyEntity>{
-                        bounty_id: claimEventData[0],
-                        status: BountyStatus.Claimed,
-                        chain_id: chain.id,
-                        modified_at: blockEntity.id
-                    };
-                    await bountyRepository.insert(bounty);
-                } else {
-                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) {
-                        bountyEntry.status = BountyStatus.Claimed;
-                        bountyEntry.modified_at = blockEntity.id;
-                    }
-                    await bountyRepository.update(bountyEntry);
+        const claimedEvent = extrinsicEvents.filter((ev: Record<string, AnyJson>) => ev.section === EventSection.Bounties && ev.method === EventMethod.BountyClaimed);
+        if (claimedEvent) {
+            const ce = JSON.parse(JSON.stringify(claimedEvent));
+            const claimEventData = JSON.parse(JSON.stringify(ce.data));
+            const bountyEntry = await bountyRepository.getByBountyIdAndChainId(claimEventData[0], chain.id);
+            if (!bountyEntry) {
+                const bounty = <BountyEntity>{
+                    bounty_id: claimEventData[0],
+                    status: BountyStatus.Claimed,
+                    chain_id: chain.id,
+                    modified_at: blockEntity.id
+                };
+                await bountyRepository.insert(bounty);
+            } else {
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) {
+                    bountyEntry.status = BountyStatus.Claimed;
+                    bountyEntry.modified_at = blockEntity.id;
                 }
+                await bountyRepository.update(bountyEntry);
             }
         }
     },
@@ -686,6 +703,56 @@ export const indexingService = {
                             beneficiary: beneficiary.id,
                             finder: finder.id,
                             modified_at: blockEntity.id
+                        };
+                        await tipProposalRepository.insert(tipProposal);
+                    }
+                }
+                break;
+            }
+            case ExtrinsicMethod.TIPNEW: {
+                const tipEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.NewTip);
+                if (tipEvent) {
+                    const motionHash = JSON.parse(JSON.stringify(tipEvent!.data))[0];
+                    const tipProposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
+                    const beneficiary = await accountRepository.getOrCreateAccount(args.who, chain.id);
+                    const finder = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+
+
+                    let value = <number>{};
+                    if (String(args.tip_value).includes("k" + chain.token_symbol!)) {
+                        value = parseFloat(args.tip_value) * 1000;
+                    } else if (String(args.tip_value).includes("m" + chain.token_symbol!)) {
+                        value = parseFloat(args.tip_value) / 1000;
+                    } else if (String(args.tip_value).includes(chain.token_symbol!)) {
+                        value = parseFloat(args.tip_value)
+                    } else {
+                        value = parseFloat((args.tip_value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                    }
+
+                    if (tipProposalEntry) {
+                        tipProposalEntry.reason = args.reason;
+                        tipProposalEntry.chain_id = chain.id;
+                        tipProposalEntry.proposed_at = blockEntity.id;
+                        tipProposalEntry.motion_hash = motionHash;
+                        tipProposalEntry.beneficiary = beneficiary.id;
+                        tipProposalEntry.finder = finder.id;
+                        tipProposalEntry.value = value;
+                        if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tipProposalEntry.modified_at)) {
+                            tipProposalEntry.status = TipProposalStatus.Proposed;
+                            tipProposalEntry.modified_at = blockEntity.id;
+                        }
+                        await tipProposalRepository.update(tipProposalEntry);
+                    } else if (!tipProposalEntry) {
+                        const tipProposal = <TipProposalEntity>{
+                            reason: args.reason,
+                            chain_id: chain.id,
+                            proposed_at: blockEntity.id,
+                            status: TipProposalStatus.Proposed,
+                            motion_hash: motionHash,
+                            beneficiary: beneficiary.id,
+                            finder: finder.id,
+                            modified_at: blockEntity.id,
+                            value: value
                         };
                         await tipProposalRepository.insert(tipProposal);
                     }
@@ -789,18 +856,19 @@ export const indexingService = {
     /*
         handles democracy propose calls
     */
-    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any,  args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+        const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash))
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
             const proposal_index = JSON.parse(JSON.stringify(proposeEvent.data))[0];
-            const proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(proposal_index, chain.id, ProposalType.Democracy);
+            const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
             if (!proposal) {
                 const proposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
                     proposal_index: proposal_index,
                     status: ProposalStatus.Proposed,
                     proposed_at: blockEntity.id,
-                    motion_hash: JSON.parse(JSON.stringify(args.proposal_hash)),
+                    motion_hash: proposalHash,
                     modified_at: blockEntity.id,
                     type: ProposalType.Democracy
                 };
@@ -810,7 +878,7 @@ export const indexingService = {
                 await proposalRepository.insert(proposalEntity);
             } else {
                 proposal.proposed_at = blockEntity.id;
-                proposal.motion_hash = JSON.parse(JSON.stringify(args.proposal_hash));
+                proposal.motion_hash = proposalHash;
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 proposal.proposed_by = account.id;
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
@@ -844,6 +912,7 @@ export const indexingService = {
                 }
             }
             if (decoded_proposal) {
+                console.log(JSON.parse(JSON.stringify(decoded_proposal)));
                 preImageMethod = JSON.parse(JSON.stringify(decoded_proposal!.method));
                 preImageSection = JSON.parse(JSON.stringify(decoded_proposal!.section));
             } else if (!decoded_proposal) {
@@ -871,8 +940,7 @@ export const indexingService = {
                     method: preImageMethod,
                     proposed_by: account.id,
                     modified_at: blockEntity.id,
-                    status: ProposalStatus.Proposed,
-                    type: ProposalType.Democracy
+                    status: ProposalStatus.Proposed
                 };
                 proposalRepository.insert(proposalEntity);
             }
@@ -883,6 +951,7 @@ export const indexingService = {
        this function is called to parse the endorsals/ seconds for proposals
     */
     async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
+
         const secondEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Seconded && e.section === EventSection.Democracy);
         if (secondEvent) {
             const endorsement = <EndorsementEntity>{};
@@ -969,7 +1038,9 @@ export const indexingService = {
         const democracyStartedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Started && e.section === EventSection.Democracy);
         const technicalCommitteeIndex = args.index;
         const technicalCommitteeEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.TechnicalCommittee);
-        let proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(technicalCommitteeIndex, chain.id, ProposalType.TechnicalCommittee);
+        const technicalCommitteeCloseEvent = technicalCommitteeEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Closed && e.section === EventSection.TechnicalCommittee);
+        const technicalCommitteeHash = JSON.parse(JSON.stringify(technicalCommitteeCloseEvent!.data))[0];
+        let proposal = await proposalRepository.getByMotionHashAndChainId(technicalCommitteeHash, chain.id);
         let technicalCommitteeStatus = <string>{};
 
         technicalCommitteeEvents.map(async (event: Record<string, AnyJson>) => {
@@ -984,7 +1055,8 @@ export const indexingService = {
         });
 
         if (proposal) {
-            proposal.motion_hash = args.proposal_hash;
+            proposal.motion_hash = technicalCommitteeHash;
+            proposal.type = ProposalType.TechnicalCommittee;
             if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
                 proposal.status = technicalCommitteeStatus;
                 proposal.modified_at = blockEntity.id;
@@ -997,7 +1069,7 @@ export const indexingService = {
                 status: technicalCommitteeStatus,
                 modified_at: blockEntity.id,
                 type: ProposalType.TechnicalCommittee,
-                motion_hash: args.proposal_hash
+                motion_hash: technicalCommitteeHash
             };
             proposal = await proposalRepository.insert(proposalEntity);
         }
@@ -1030,32 +1102,29 @@ export const indexingService = {
         }
     },
 
-    async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsic: any, extrinsicSigner: string): Promise<void> {
+    async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const technicalCommitteeProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.TechnicalCommittee);
         if (technicalCommitteeProposedEvent) {
+            const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2];
             const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
-            const proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(proposalIndex, chain.id, ProposalType.TechnicalCommittee);
+            const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
             const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             if (!proposal) {
                 const proposalEntity: ProposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
                     proposal_index: proposalIndex,
-                    motion_hash: args.proposal_hash,
+                    motion_hash: proposalHash,
                     proposed_at: blockEntity.id,
                     proposed_by: account.id,
                     status: ProposalStatus.Proposed,
                     modified_at: blockEntity.id,
-                    type: ProposalType.TechnicalCommittee,
-                    section: args.proposal.section,
-                    method: args.proposal.method
+                    type: ProposalType.TechnicalCommittee
                 };
                 proposalEntity.proposed_by = account.id;
 
                 proposalRepository.insert(proposalEntity);
             } else {
-                proposal.method = args.proposal.method;
-                proposal.motion_hash = args.proposal_hash,
-                    proposal.section = args.proposal.section;
+                proposal.motion_hash = proposalHash;
                 proposal.proposed_at = blockEntity.id;
                 proposal.proposed_by = account.id;
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
