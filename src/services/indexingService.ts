@@ -240,16 +240,18 @@ export const indexingService = {
             } else if (councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Disapproved)) {
                 councilMotion.status = CouncilMotionStatus.Disapproved;
             }
+            
+            if(councilEventMethod.some((ev: AnyJson) => ev === EventMethod.Executed)) {
+                councilMotion.status = CouncilMotionStatus.Executed;
+            }
 
             if (!councilMotionEntry) {
                 councilMotionRepository.insert(councilMotion);
             } else if (councilMotionEntry) {
                 councilMotionEntry.proposal_index = councilMotion.proposal_index;
                 councilMotionEntry.to_block = councilMotion.to_block;
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, councilMotionEntry.modified_at)) {
-                    councilMotionEntry.status = councilMotion.status;
-                    councilMotionEntry.modified_at = blockEntity.id;
-                }
+                councilMotionEntry.status = councilMotion.status;
+                councilMotionEntry.modified_at = blockEntity.id;
                 councilMotionRepository.update(councilMotionEntry);
             }
         }
@@ -538,10 +540,8 @@ export const indexingService = {
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) {
-                    referendum.status = ReferendumStatus.Executed;
-                    referendum.modified_at = blockEntity.id;
-                }
+                referendum.status = ReferendumStatus.Executed;
+                referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
@@ -580,10 +580,8 @@ export const indexingService = {
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) {
-                    referendum.status = ReferendumStatus.NotPassed;
-                    referendum.modified_at = blockEntity.id;
-                }
+                referendum.status = ReferendumStatus.NotPassed;
+                referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
@@ -602,10 +600,8 @@ export const indexingService = {
                 };
                 referendumRepository.insert(referendumEntity);
             } else {
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) {
-                    referendum.status = ReferendumStatus.Cancelled;
-                    referendum.modified_at = blockEntity.id;
-                }
+                referendum.status = ReferendumStatus.Cancelled;
+                referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
                 referendumRepository.update(referendum);
             }
@@ -812,10 +808,8 @@ export const indexingService = {
                     };
                     await tipProposalRepository.insert(tipProposal);
                 } else {
-                    if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tipProposalEntry.modified_at)) {
-                        tipProposalEntry.status = TipProposalStatus.Retracted;
-                        tipProposalEntry.modified_at = blockEntity.id;
-                    }
+                    tipProposalEntry.status = TipProposalStatus.Retracted;
+                    tipProposalEntry.modified_at = blockEntity.id;
                     await tipProposalRepository.update(tipProposalEntry);
                 }
                 break;
@@ -847,10 +841,8 @@ export const indexingService = {
                         };
                         tipProposalRepository.insert(tipProposal);
                     } else if (tipProposalEntry) {
-                        if (await blockRepository.hasHigherBlockNumber(blockEntity.id, tipProposalEntry.modified_at)) {
-                            tipProposalEntry.status = TipProposalStatus.Closed;
-                            tipProposalEntry.modified_at = blockEntity.id;
-                        }
+                        tipProposalEntry.status = TipProposalStatus.Closed;
+                        tipProposalEntry.modified_at = blockEntity.id;
                         tipProposalEntry.value = value;
                         tipProposalEntry.chain_id = chain.id;
                         await tipProposalRepository.update(tipProposalEntry);
@@ -1103,10 +1095,8 @@ export const indexingService = {
         if (proposal) {
             proposal.motion_hash = technicalCommitteeHash;
             proposal.type = ProposalType.TechnicalCommittee;
-            if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
-                proposal.status = technicalCommitteeStatus;
-                proposal.modified_at = blockEntity.id;
-            }
+            proposal.status = technicalCommitteeStatus;
+            proposal.modified_at = blockEntity.id;
             proposalRepository.update(proposal);
         } else {
             const proposalEntity = <ProposalEntity>{
