@@ -370,50 +370,51 @@ export const indexingService = {
     */
     async parseProposeBounty(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const bountiesProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.section === EventSection.Bounties && e.method === EventMethod.BountyProposed);
-        if (bountiesProposedEvent) { }
-        const bpe = JSON.parse(JSON.stringify(bountiesProposedEvent));
-        const bountyId = bpe.data[0];
-        const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
-        let entry: BountyEntity = <BountyEntity>{};
-        entry.status = BountyStatus.Proposed;
+        if (bountiesProposedEvent) {
+            const bpe = JSON.parse(JSON.stringify(bountiesProposedEvent));
+            const bountyId = bpe.data[0];
+            const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyId, chain.id);
+            let entry: BountyEntity = <BountyEntity>{};
+            entry.status = BountyStatus.Proposed;
 
-        if (bountyEntry) {
-            entry = bountyEntry;
-        }
-
-        entry.bounty_id = bountyId;
-        entry.description = String(args.description);
-        let value = <number>{};
-        if (String(args.value).includes("k" + chain.token_symbol!)) {
-            value = parseFloat(args.value) * 1000;
-        } else if (String(args.value).includes("m" + chain.token_symbol!)) {
-            value = parseFloat(args.value) / 1000;
-        } else if (String(args.value).includes(chain.token_symbol!)) {
-            value = parseFloat(args.value)
-        } else {
-            value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-        }
-        entry.value = value;
-        entry.chain_id = chain.id;
-        const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-        entry.proposed_by = proposer.id;
-        entry.proposed_at = blockEntity.id;
-        entry.modified_at = blockEntity.id;
-
-        if (!bountyEntry) {
-            bountyRepository.insert(entry);
-        } else {
-            bountyEntry.bounty_id = entry.id;
-            bountyEntry.description = entry.description;
-            bountyEntry.value = value
-            bountyEntry.chain_id = entry.chain_id;
-            bountyEntry.proposed_by = entry.proposed_by;
-            bountyEntry.proposed_at = entry.proposed_at;
-            if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) {
-                bountyEntry.status = entry.status;
-                bountyEntry.modified_at = entry.modified_at;
+            if (bountyEntry) {
+                entry = bountyEntry;
             }
-            bountyRepository.update(bountyEntry);
+
+            entry.bounty_id = bountyId;
+            entry.description = String(args.description);
+            let value = <number>{};
+            if (String(args.value).includes("k" + chain.token_symbol!)) {
+                value = parseFloat(args.value) * 1000;
+            } else if (String(args.value).includes("m" + chain.token_symbol!)) {
+                value = parseFloat(args.value) / 1000;
+            } else if (String(args.value).includes(chain.token_symbol!)) {
+                value = parseFloat(args.value)
+            } else {
+                value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+            }
+            entry.value = value;
+            entry.chain_id = chain.id;
+            const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+            entry.proposed_by = proposer.id;
+            entry.proposed_at = blockEntity.id;
+            entry.modified_at = blockEntity.id;
+
+            if (!bountyEntry) {
+                bountyRepository.insert(entry);
+            } else {
+                bountyEntry.bounty_id = entry.id;
+                bountyEntry.description = entry.description;
+                bountyEntry.value = value
+                bountyEntry.chain_id = entry.chain_id;
+                bountyEntry.proposed_by = entry.proposed_by;
+                bountyEntry.proposed_at = entry.proposed_at;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) {
+                    bountyEntry.status = entry.status;
+                    bountyEntry.modified_at = entry.modified_at;
+                }
+                bountyRepository.update(bountyEntry);
+            }
         }
     },
 
