@@ -912,7 +912,6 @@ export const indexingService = {
                 }
             }
             if (decoded_proposal) {
-                console.log(JSON.parse(JSON.stringify(decoded_proposal)));
                 preImageMethod = JSON.parse(JSON.stringify(decoded_proposal!.method));
                 preImageSection = JSON.parse(JSON.stringify(decoded_proposal!.section));
             } else if (!decoded_proposal) {
