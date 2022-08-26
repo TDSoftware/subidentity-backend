@@ -13,6 +13,9 @@ const blockOverhead = 40;
 
 
 export const listenerService = {
+    /*
+    * The listener service is responsible for calling the indexing functions on new blocks.
+    */
     async parseNewBlocks(wsProviderAddress: string): Promise<void> {
         chain = await chainService.getChainEntityByWsProvider(wsProviderAddress);
         wsProvider = new WsProvider(wsProviderAddress);
