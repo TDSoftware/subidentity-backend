@@ -164,7 +164,7 @@ export const indexingService = {
             case (ExtrinsicSection.DEMOCRACY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
-                if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(extrinsicEvents, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.NOTEIMMINENTPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
                 break;
@@ -1023,51 +1023,49 @@ export const indexingService = {
     /*
     * This function parses the democracy vote extrinsic and creates or updates the corresponding database tables. (referendum, referendum_vote)
     */
-    async parseDemocracyVote(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
-        const voteEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Voted && e.section === EventSection.Democracy);
-        if (voteEvent) {
-            const voteDetails = JSON.parse(JSON.stringify(voteEvent!.data))[2].Standard;
-            const vote = <ReferendumVoteEntity>{
-                referendum_id: JSON.parse(JSON.stringify(voteEvent.data))[1],
-                vote: voteDetails.vote.vote === Vote.Aye,
-                voted_at: blockEntity.id
+    async parseDemocracyVote(args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+        const referendumIndex = args.ref_index;
+        const voteDetails = JSON.parse(JSON.stringify(args.vote)).Standard;
+        const vote = <ReferendumVoteEntity>{
+            referendum_id: referendumIndex,
+            vote: voteDetails.vote.vote === Vote.Aye,
+            voted_at: blockEntity.id
+        };
+
+        if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
+            vote.locked_value = parseFloat(voteDetails.balance) * 1000;
+        } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
+            vote.locked_value = parseFloat(voteDetails.balance) / 1000;
+        } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
+            vote.locked_value = parseFloat(voteDetails.balance);
+        } else {
+            vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+        }
+
+        if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
+        else {
+            vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
+        }
+        const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+        vote.voter = voter.id;
+
+        const referendum = await referendumRepository.getByReferendumIndexAndChainId(vote.referendum_id, chain.id);
+        if (referendum === undefined) {
+            const referendumEntity = <ReferendumEntity>{
+                referendum_index: vote.referendum_id,
+                chain_id: chain.id,
+                modified_at: blockEntity.id
             };
+            const insertedReferendum = await referendumRepository.insert(referendumEntity);
+            vote.referendum_id = insertedReferendum.id;
+        }
+        else {
+            vote.referendum_id = referendum.id;
+        }
 
-            if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
-                vote.locked_value = parseFloat(voteDetails.balance) * 1000;
-            } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
-                vote.locked_value = parseFloat(voteDetails.balance) / 1000;
-            } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
-                vote.locked_value = parseFloat(voteDetails.balance);
-            } else {
-                vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-            }
-
-            if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
-            else {
-                vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
-            }
-            const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-            vote.voter = voter.id;
-
-            const referendum = await referendumRepository.getByReferendumIndexAndChainId(vote.referendum_id, chain.id);
-            if (referendum === undefined) {
-                const referendumEntity = <ReferendumEntity>{
-                    referendum_index: vote.referendum_id,
-                    chain_id: chain.id,
-                    modified_at: blockEntity.id
-                };
-                const insertedReferendum = await referendumRepository.insert(referendumEntity);
-                vote.referendum_id = insertedReferendum.id;
-            }
-            else {
-                vote.referendum_id = referendum.id;
-            }
-
-            const voteEntry = await referendumVoteRepository.getByVoterAndReferendumId(vote.voter, vote.referendum_id);
-            if (voteEntry === undefined) {
-                await referendumVoteRepository.insert(vote);
-            }
+        const voteEntry = await referendumVoteRepository.getByVoterAndReferendumId(vote.voter, vote.referendum_id);
+        if (voteEntry === undefined) {
+            await referendumVoteRepository.insert(vote);
         }
     },
 
@@ -1149,7 +1147,7 @@ export const indexingService = {
         if (technicalCommitteeProposedEvent) {
             const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2]
             const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
-            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);  
+            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
 
             if (!proposal) {
