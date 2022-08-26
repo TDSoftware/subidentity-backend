@@ -398,13 +398,13 @@ export const indexingService = {
 
             let value: number = <number>{};
             if (String(args.value).includes("k" + chain.token_symbol!)) {
-                tpEntry.value = parseFloat(args.value) * 1000;
+                value = parseFloat(args.value) * 1000;
             } else if (String(args.value).includes("m" + chain.token_symbol!)) {
                 value = parseFloat(args.value) / 1000;
             } else if (String(args.value).includes(chain.token_symbol!)) {
-                tpEntry.value = parseFloat(args.value);
+                value = parseFloat(args.value);
             } else {
-                tpEntry.value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
             }
 
             if (tpEntry) {
@@ -856,7 +856,7 @@ export const indexingService = {
     /*
         handles democracy propose calls
     */
-    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any,  args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash))
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
@@ -1035,11 +1035,11 @@ export const indexingService = {
 
     async parseTechnicalCommitteeClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         const democracyStartedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Started && e.section === EventSection.Democracy);
-        const technicalCommitteeIndex = args.index;
         const technicalCommitteeEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.TechnicalCommittee);
         const technicalCommitteeCloseEvent = technicalCommitteeEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Closed && e.section === EventSection.TechnicalCommittee);
         const technicalCommitteeHash = JSON.parse(JSON.stringify(technicalCommitteeCloseEvent!.data))[0];
         let proposal = await proposalRepository.getByMotionHashAndChainId(technicalCommitteeHash, chain.id);
+        const technicalCommitteeIndex = args.index;
         let technicalCommitteeStatus = <string>{};
 
         technicalCommitteeEvents.map(async (event: Record<string, AnyJson>) => {
@@ -1092,6 +1092,7 @@ export const indexingService = {
             } else {
                 referendum.started_at = blockEntity.id;
                 referendum.vote_threshold = voteThreshold;
+                referendum.proposal_id = proposal.id;
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) {
                     referendum.status = ReferendumStatus.Started;
                     referendum.modified_at = blockEntity.id;
@@ -1120,18 +1121,18 @@ export const indexingService = {
                     type: ProposalType.TechnicalCommittee
                 };
                 proposalEntity.proposed_by = account.id;
-
                 proposalRepository.insert(proposalEntity);
-            } else {
-                proposal.motion_hash = proposalHash;
-                proposal.proposed_at = blockEntity.id;
-                proposal.proposed_by = account.id;
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
-                    proposal.status = ProposalStatus.Proposed;
-                    proposal.modified_at = blockEntity.id;
-                }
-                proposalRepository.update(proposal);
             }
+            proposal.method = args.proposal.method;
+            proposal.motion_hash = proposalHash;
+            proposal.section = args.proposal.section;
+            proposal.proposed_at = blockEntity.id;
+            proposal.proposed_by = account.id;
+            if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
+                proposal.status = ProposalStatus.Proposed;
+                proposal.modified_at = blockEntity.id;
+            }
+            proposalRepository.update(proposal);
         }
     }
 };
