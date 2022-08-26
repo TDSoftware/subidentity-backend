@@ -163,7 +163,7 @@ export const indexingService = {
                 break;
             case (ExtrinsicSection.TECHNICALCOMMITTEE):
                 if (extrinsicMethod === ExtrinsicMethod.CLOSE) await this.parseTechnicalCommitteeClose(extrinsicEvents, args, blockEntity);
-                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseTechnicalCommitteePropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
+                if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseTechnicalCommitteePropose(extrinsicEvents, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.PROXY):
                 if (extrinsicMethod === ExtrinsicMethod.PROXY) await this.parseProxyProxy(extrinsicSection, extrinsicMethod, extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
@@ -175,21 +175,10 @@ export const indexingService = {
     * This function extracts the call included in a proxy proxy extrinsic and calls the parseMethodAndSection function to handle the call.
     */ 
     async parseProxyProxy(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
-        if ((extrinsicSection === ExtrinsicSection.MULTISIG && extrinsicMethod === ExtrinsicMethod.ASMULTI)
-            || (extrinsicSection === ExtrinsicSection.PROXY && extrinsicMethod === ExtrinsicMethod.PROXY)) {
-            extrinsic = args.call;
-            extrinsicMethod = extrinsic.method;
-            extrinsicSection = extrinsic.section;
-            args = extrinsic.args;
-        } else {
-            extrinsic = extrinsic.method.args.call;
-            if (extrinsic) {
-                extrinsicMethod = extrinsic.method;
-                extrinsicSection = extrinsic.section;
-                args = extrinsic.args;
-            }
-            else args = extrinsic.method.args;
-        }
+        extrinsic = args.call;
+        extrinsicMethod = extrinsic.method;
+        extrinsicSection = extrinsic.section;
+        args = extrinsic.args;
         await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
     },
 
@@ -197,13 +186,10 @@ export const indexingService = {
     * This functions extracts the call included in a multisig asMulti extrinsic and calls the parseMethodAndSection function to handle the call.
     */
     async parseMultisigAsMulti(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
-        extrinsic = extrinsic.method.args.call;
-        if (extrinsic) {
-            extrinsicMethod = extrinsic.method;
-            extrinsicSection = extrinsic.section;
-            args = extrinsic.args;
-        }
-        else args = extrinsic.method.args;
+        extrinsic = args.call;
+        extrinsicMethod = extrinsic.method;
+        extrinsicSection = extrinsic.section;
+        args = extrinsic.args;
         await this.parseMethodAndSection(extrinsicSection, extrinsicMethod, extrinsic, extrinsicEvents, blockEvents, args, blockEntity, extrinsicSigner);
     },
 
@@ -1142,13 +1128,14 @@ export const indexingService = {
     /*
     * This function parses the technicalCommittee propose extrinsic and creates or updates the corresponding database tables. (proposal)
     */
-    async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
+    async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const technicalCommitteeProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.TechnicalCommittee);
         if (technicalCommitteeProposedEvent) {
-            const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2];
-            const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
+            const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2]
             const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
-            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);  
+            const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
+
             if (!proposal) {
                 const proposalEntity: ProposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
@@ -1160,17 +1147,17 @@ export const indexingService = {
                     modified_at: blockEntity.id,
                     type: ProposalType.TechnicalCommittee
                 };
-                proposalEntity.proposed_by = account.id;
                 proposalRepository.insert(proposalEntity);
+            } else if (proposal) {
+                proposal.proposed_at = blockEntity.id;
+                proposal.proposed_by = account.id;
+                proposal.proposal_index = proposalIndex;
+                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
+                    proposal.status = ProposalStatus.Proposed;
+                    proposal.modified_at = blockEntity.id;
+                }
+                proposalRepository.update(proposal);
             }
-            proposal.motion_hash = proposalHash;
-            proposal.proposed_at = blockEntity.id;
-            proposal.proposed_by = account.id;
-            if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
-                proposal.status = ProposalStatus.Proposed;
-                proposal.modified_at = blockEntity.id;
-            }
-            proposalRepository.update(proposal);
         }
     }
 };
