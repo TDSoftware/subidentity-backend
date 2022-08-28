@@ -11,6 +11,8 @@ const INCREMENT = "INCREMENT";
 const COUNTER = "COUNTER";
 const SLOT = "SLOT";
 const cpuCores = os.cpus().length;
+
+// miminum indexing capacity is 75% of the cpu cores, can be adjusted based on preference
 const minimumWorkerThreshold = Math.round(cpuCores * 0.75);
 
 export const clusterService = {
@@ -33,6 +35,7 @@ export const clusterService = {
                 cluster.fork();
             }
 
+            // this will kill the workers and restart them if a threshold of crashed workers is reached
             const crashedWorkerCount = 0;
             cluster.on("exit", async (worker: any) => {
                 console.log("Worker " + worker.id + " died.");
@@ -45,6 +48,7 @@ export const clusterService = {
                 }
             });
 
+            // this messaging is necessary to convey the workers which slots they should index
             cluster.on("message", (worker: any, msg: any) => {
                 if (msg.topic === INCREMENT) {
                     counter++;
@@ -55,6 +59,8 @@ export const clusterService = {
                 }
             });
 
+            // this will run every 30 minutes while indexing to check if the indexing process is finished
+            // if it will not detect any orphan block (blocks in db without parent hash) under the indexing threshold it will set the attribute isIndexed of the chain to true
             cron.schedule("0 */30 * * * *", async () => {
                 const chain = await chainRepository.findByWsProvider(endpoint);
                 const indexThreshold = slots.reduce((acc: number[], curr: number[]) => { return acc[1] > curr[1] ? acc : curr })[1];
@@ -72,7 +78,7 @@ export const clusterService = {
             console.log("Indexing will commence in " + slots.length + " batches.");
 
         } else if (cluster.isWorker) {
-            // retrieve slots
+            // retrieving the indexing slots via messaging
             setTimeout(this.retrieveSlots, 100 * cluster.worker!.id);
             process.on("message", (msg: any) => {
                 if (msg.topic === SLOT) {

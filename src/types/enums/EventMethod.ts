@@ -20,5 +20,6 @@ export enum EventMethod {
     Cancelled = "Cancelled",
     Approved = "Approved",
     Rejected = "Rejected",
-    Disapproved = "Disapproved"
+    Disapproved = "Disapproved",
+    Closed = "Closed"
 }

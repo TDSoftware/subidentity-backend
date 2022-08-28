@@ -15,7 +15,10 @@ const cpuCores = os.cpus().length;
 const args = minimist(process.argv.slice(2));
 
 export const executionManager = {
-
+    /*
+    * This function calculcates the range of blocks that each worker should index.
+    * The calculation is based on the cpu cores of the executing machine.
+    */
     async createSlots(endpoint: string, slotCount: number): Promise<number[][]> {
         chain = chain = await chainService.getChainEntityByWsProvider(endpoint);
         const wsProvider = new WsProvider(endpoint);
@@ -43,10 +46,10 @@ export const executionManager = {
         return slotsWithNext;
     },
 
+    // responsible for recalculating slots when the indexer is restarted
     async recalculateSlots(): Promise<number[][]> {
         console.log("Continuing indexing " + chain.chain_name + ", recalculating slots...");
         const slotsWithNext = [];
-        // we are first getting the orphan blocks (blocks in the db without a parent hash) and then we get the first block with a lower block number
         const orphanBlocks = await blockRepository.getOrphanBlocks(chain.id);
         for (let i = 0; i < orphanBlocks.length; i++) {
             const firstBlockWithLowerNumber = await blockRepository.getFirstBlockWithLowerNumber(orphanBlocks[i].number, chain.id);
@@ -59,7 +62,7 @@ export const executionManager = {
         return slotsWithNext;
     },
 
-    // we split them because in the end there might be less slots because some finished and some were slower (potentially due to crashes etc.)
+    // we split them because in the end there might be less slots because some finished and some were slower (potentially due to crashes, higher blocks etc.)
     // we always want to utilize our cpu cores to the fullest, so we split the biggest slots until we have the same amount of slots as cpu cores
     splitSlots(slotsWithNext: number[][]): number[][] {
         slotsWithNext.sort((a: number[], b: number[]) => b[1] - b[0] - (a[1] - a[0]));
@@ -72,4 +75,5 @@ export const executionManager = {
     }
 };
 
+// this starts the whole indexing service (including worker creation)
 clusterService.indexSlots(args.endpoint);
