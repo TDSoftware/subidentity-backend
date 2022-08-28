@@ -676,7 +676,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the council vote extrinsic and creates or updates the corresponding database tables. (council_motion_vote, council_motion)
+    * This function parses the council vote extrinsic and creates or updates the corresponding entities in the database. (council_motion_vote, council_motion)
     */
     async parseCouncilVote(args: any, blockEntity: BlockEntity, chain: ChainEntity, extrinsicSigner: string): Promise<void> {
         const councilMotionEntry = await councilMotionRepository.getByMotionHash(args.proposal);
@@ -707,7 +707,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses multiple tip extrinsics and creates or updates the corresponding database tables. (tip_proposal, tip)
+    * This function parses multiple tip extrinsics and creates or updates the corresponding entities in the database. (tip_proposal, tip)
     */
     async parseTipExtrinsics(extrinsicEvents: Record<string, AnyJson>[], extrinsicMethod: any, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         switch (extrinsicMethod) {
@@ -888,7 +888,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the democracy propose extrinsic and creates or updates the corresponding database tables. (proposal)
+    * This function parses the democracy propose extrinsic and creates or updates the corresponding entities in the database. (proposal)
     */
     async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash));
@@ -925,7 +925,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the democracy second extrinsic and creates or updates the corresponding database tables. (proposal, endorsement)
+    * This function parses the democracy second extrinsic and creates or updates the corresponding entities in the database. (proposal, endorsement)
     */
     async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
 
@@ -961,14 +961,14 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the democracy vote extrinsic and creates or updates the corresponding database tables. (referendum, referendum_vote)
+    * This function parses the democracy vote extrinsic and creates or updates the corresponding entities in the database. (referendum, referendum_vote)
     */
     async parseDemocracyVote(args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const referendumIndex = args.ref_index;
         const voteInformation = JSON.parse(JSON.stringify(args.vote));
+        const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
         let voteDetails = <any>{};
         let vote = <ReferendumVoteEntity>{};
-
 
         if (voteInformation.Standard) {
             voteDetails = voteInformation.Standard;
@@ -996,14 +996,12 @@ export const indexingService = {
                 voted_at: blockEntity.id,
                 locked_value: 0
             };
-            console.log(voteInformation)
         }
 
         if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
         else {
             vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
         }
-        const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
         vote.voter = voter.id;
 
         const referendum = await referendumRepository.getByReferendumIndexAndChainId(vote.referendum_id, chain.id);
@@ -1027,7 +1025,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the technicalCommittee close extrinsic and creates or updates the corresponding database tables. (referendum, proposal)
+    * This function parses the technicalCommittee close extrinsic and creates or updates the corresponding entities in the database. (referendum, proposal)
     */
     async parseTechnicalCommitteeClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         const democracyStartedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Started && e.section === EventSection.Democracy);
@@ -1097,7 +1095,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the technicalCommittee propose extrinsic and creates or updates the corresponding database tables. (proposal)
+    * This function parses the technicalCommittee propose extrinsic and creates or updates the corresponding entities in the database. (proposal)
     */
     async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const technicalCommitteeProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.TechnicalCommittee);
