@@ -988,20 +988,22 @@ export const indexingService = {
                 vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
             }
 
+            if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
+            else {
+                vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
+            }
+
         } else {
             voteDetails = voteInformation;
             vote = <ReferendumVoteEntity>{
                 referendum_id: referendumIndex,
                 vote: voteDetails.vote === Vote.Aye,
                 voted_at: blockEntity.id,
-                locked_value: 0
+                locked_value: 0,
+                conviction: 0.1
             };
         }
 
-        if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
-        else {
-            vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
-        }
         vote.voter = voter.id;
 
         const referendum = await referendumRepository.getByReferendumIndexAndChainId(vote.referendum_id, chain.id);
