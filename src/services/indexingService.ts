@@ -188,6 +188,7 @@ export const indexingService = {
     */
     async parseProxyProxy(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         extrinsic = args.call;
+        extrinsicSigner = args.real;
         extrinsicMethod = extrinsic.method;
         extrinsicSection = extrinsic.section;
         args = extrinsic.args;
@@ -964,21 +965,38 @@ export const indexingService = {
     */
     async parseDemocracyVote(args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const referendumIndex = args.ref_index;
-        const voteDetails = JSON.parse(JSON.stringify(args.vote)).Standard;
-        const vote = <ReferendumVoteEntity>{
-            referendum_id: referendumIndex,
-            vote: voteDetails.vote.vote === Vote.Aye,
-            voted_at: blockEntity.id
-        };
+        const voteInformation = JSON.parse(JSON.stringify(args.vote));
+        let voteDetails = <any>{};
+        let vote = <ReferendumVoteEntity>{};
 
-        if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
-            vote.locked_value = parseFloat(voteDetails.balance) * 1000;
-        } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
-            vote.locked_value = parseFloat(voteDetails.balance) / 1000;
-        } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
-            vote.locked_value = parseFloat(voteDetails.balance);
+
+        if (voteInformation.Standard) {
+            voteDetails = voteInformation.Standard;
+            vote = <ReferendumVoteEntity>{
+                referendum_id: referendumIndex,
+                vote: voteDetails.vote.vote === Vote.Aye,
+                voted_at: blockEntity.id
+            };
+
+            if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
+                vote.locked_value = parseFloat(voteDetails.balance) * 1000;
+            } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
+                vote.locked_value = parseFloat(voteDetails.balance) / 1000;
+            } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
+                vote.locked_value = parseFloat(voteDetails.balance);
+            } else {
+                vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+            }
+
         } else {
-            vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+            voteDetails = voteInformation;
+            vote = <ReferendumVoteEntity>{
+                referendum_id: referendumIndex,
+                vote: voteDetails.vote === Vote.Aye,
+                voted_at: blockEntity.id,
+                locked_value: 0
+            };
+            console.log(voteInformation)
         }
 
         if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
