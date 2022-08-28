@@ -7,7 +7,7 @@ import { u8aToString, hexToU8a } from "@polkadot/util";
 import { chainService } from "./chainService";
 import { governanceService } from "./governanceService";
 import { ChainStatusDTO } from "../types/dtos/ChainStatusDTO";
-import { treasuryService } from "./TreasuryService";
+import { treasuryService } from "./treasuryService";
 
 export const identityService = {
 

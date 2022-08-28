@@ -119,10 +119,10 @@ export const indexingService = {
 
         for (let index = 0; index < extrinsics.length; index++) {
             const ex = extrinsics[index];
-            let extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
-            let extrinsicMethod = extrinsic.method.method;
-            let extrinsicSection = extrinsic.method.section;
-            let args = extrinsic.method.args;
+            const extrinsic = JSON.parse(JSON.stringify(ex.toHuman()));
+            const extrinsicMethod = extrinsic.method.method;
+            const extrinsicSection = extrinsic.method.section;
+            const args = extrinsic.method.args;
             let extrinsicSigner: string;
 
             if (ex.signer) {
@@ -159,7 +159,7 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.SET) await this.parseTimestampSet(blockEvents, blockEntity);
                 break;
             case (ExtrinsicSection.MULTISIG):
-                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseMultisigAsMulti(extrinsicSection, extrinsicMethod, extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner)
+                if (extrinsicMethod === ExtrinsicMethod.ASMULTI) await this.parseMultisigAsMulti(extrinsicSection, extrinsicMethod, extrinsicEvents, extrinsic, args, blockEvents, blockEntity, extrinsicSigner);
                 break;
             case (ExtrinsicSection.DEMOCRACY):
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
@@ -389,9 +389,9 @@ export const indexingService = {
             } else if (String(args.value).includes("m" + chain.token_symbol!)) {
                 value = parseFloat(args.value) / 1000;
             } else if (String(args.value).includes(chain.token_symbol!)) {
-                value = parseFloat(args.value)
+                value = parseFloat(args.value);
             } else {
-                value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                value = parseFloat((args.value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
             }
             entry.value = value;
             entry.chain_id = chain.id;
@@ -405,7 +405,7 @@ export const indexingService = {
             } else {
                 bountyEntry.bounty_id = entry.id;
                 bountyEntry.description = entry.description;
-                bountyEntry.value = value
+                bountyEntry.value = value;
                 bountyEntry.chain_id = entry.chain_id;
                 bountyEntry.proposed_by = entry.proposed_by;
                 bountyEntry.proposed_at = entry.proposed_at;
@@ -437,7 +437,7 @@ export const indexingService = {
             } else if (String(args.value).includes(chain.token_symbol!)) {
                 value = parseFloat(args.value);
             } else {
-                value = parseFloat((args.value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                value = parseFloat((args.value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
             }
 
             if (tpEntry) {
@@ -763,9 +763,9 @@ export const indexingService = {
                     } else if (String(args.tip_value).includes("m" + chain.token_symbol!)) {
                         value = parseFloat(args.tip_value) / 1000;
                     } else if (String(args.tip_value).includes(chain.token_symbol!)) {
-                        value = parseFloat(args.tip_value)
+                        value = parseFloat(args.tip_value);
                     } else {
-                        value = parseFloat((args.tip_value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                        value = parseFloat((args.tip_value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
                     }
 
                     if (tipProposalEntry) {
@@ -828,9 +828,9 @@ export const indexingService = {
                     } else if (String(JSON.parse(JSON.stringify(tipEvent!.data))[2]).includes("m" + chain.token_symbol!)) {
                         value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2]) / 1000;
                     } else if (String(JSON.parse(JSON.stringify(tipEvent!.data))[2]).includes(chain.token_symbol!)) {
-                        value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2])
+                        value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2]);
                     } else {
-                        value = parseFloat((JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                        value = parseFloat((JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
                     }
 
                     if (!tipProposalEntry) {
@@ -878,7 +878,7 @@ export const indexingService = {
                 } else if (String(args.tip_value).includes(chain.token_symbol!)) {
                     tip.value = parseFloat(args.tip_value);
                 } else {
-                    tip.value = parseFloat((args.tip_value.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                    tip.value = parseFloat((args.tip_value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
                 }
 
                 tip.tipped_at = blockEntity.id;
@@ -892,7 +892,7 @@ export const indexingService = {
     * This function parses the democracy propose extrinsic and creates or updates the corresponding database tables. (proposal)
     */
     async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
-        const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash))
+        const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash));
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
             const proposal_index = JSON.parse(JSON.stringify(proposeEvent.data))[0];
@@ -1039,7 +1039,7 @@ export const indexingService = {
         } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
             vote.locked_value = parseFloat(voteDetails.balance);
         } else {
-            vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, '') / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+            vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
         }
 
         if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
@@ -1145,7 +1145,7 @@ export const indexingService = {
     async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const technicalCommitteeProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.TechnicalCommittee);
         if (technicalCommitteeProposedEvent) {
-            const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2]
+            const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2];
             const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
             const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
