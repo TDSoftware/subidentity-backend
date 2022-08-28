@@ -165,8 +165,6 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEIMMINENTPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
                 break;
             case (ExtrinsicSection.TIPS):
                 await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
@@ -896,7 +894,7 @@ export const indexingService = {
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
             const proposal_index = JSON.parse(JSON.stringify(proposeEvent.data))[0];
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
+            const proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(proposal_index, chain.id, ProposalType.Democracy);
             if (!proposal) {
                 const proposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
@@ -921,65 +919,6 @@ export const indexingService = {
                     proposal.modified_at = blockEntity.id;
                 }
                 await proposalRepository.update(proposal);
-            }
-        }
-    },
-
-    /*
-    * This function parses the democracy notePreimage extrinsic and creates or updates the corresponding database tables. (proposal)
-    */
-    async parseDemocracyNotePreimage(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
-        let decoded_proposal: Record<string, AnyJson> | null = null;
-        const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
-        if (preImageEvent) {
-            let preImageMethod: string = <string>{};
-            let preImageSection: string = <string>{};
-
-            // decoding is a little janky but this should work for now, manual adjustment after indexing may be required
-            const encoded_proposal = args.encoded_proposal.toString();
-            try {
-                decoded_proposal = api.createType("Proposal", encoded_proposal).toHuman();
-            } catch (e) {
-                try {
-                    decoded_proposal = api.createType("Call", encoded_proposal).toHuman();
-                } catch (e) {
-                    blockEntity.error = true;
-                    blockEntity.error_message = String(e);
-                    await blockRepository.update(blockEntity);
-                }
-            }
-
-            if (decoded_proposal) {
-                preImageMethod = JSON.parse(JSON.stringify(decoded_proposal!.method));
-                preImageSection = JSON.parse(JSON.stringify(decoded_proposal!.section));
-            } else if (!decoded_proposal) {
-                preImageMethod = "ERROR";
-                preImageSection = "ERROR";
-            }
-
-            const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
-            const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id);
-            if (proposal) {
-                proposal.section = preImageSection;
-                proposal.method = preImageMethod;
-                proposal.proposed_by = account.id;
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
-                    proposal.status = ProposalStatus.Proposed;
-                    proposal.modified_at = blockEntity.id;
-                }
-                proposalRepository.update(proposal);
-            } else {
-                const proposalEntity = <ProposalEntity>{
-                    chain_id: chain.id,
-                    motion_hash: proposal_hash,
-                    section: preImageSection,
-                    method: preImageMethod,
-                    proposed_by: account.id,
-                    modified_at: blockEntity.id,
-                    status: ProposalStatus.Proposed
-                };
-                proposalRepository.insert(proposalEntity);
             }
         }
     },
@@ -1077,8 +1016,8 @@ export const indexingService = {
         const technicalCommitteeEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.TechnicalCommittee);
         const technicalCommitteeCloseEvent = technicalCommitteeEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Closed && e.section === EventSection.TechnicalCommittee);
         const technicalCommitteeHash = JSON.parse(JSON.stringify(technicalCommitteeCloseEvent!.data))[0];
-        let proposal = await proposalRepository.getByMotionHashAndChainId(technicalCommitteeHash, chain.id);
         const technicalCommitteeIndex = args.index;
+        let proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(technicalCommitteeIndex, chain.id, ProposalType.TechnicalCommittee);
         let technicalCommitteeStatus = <string>{};
 
         technicalCommitteeEvents.map(async (event: Record<string, AnyJson>) => {
@@ -1146,9 +1085,9 @@ export const indexingService = {
         const technicalCommitteeProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.TechnicalCommittee);
         if (technicalCommitteeProposedEvent) {
             const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2];
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
-            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
+            const proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(proposalIndex, chain.id, ProposalType.TechnicalCommittee);
+            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
             if (!proposal) {
                 const proposalEntity: ProposalEntity = <ProposalEntity>{
