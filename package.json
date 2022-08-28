@@ -48,6 +48,8 @@
     "dev": "npm run dev-api",
     "start-api": "npm run build && node dist/src/api.js",
     "start-scheduler": "npm run build && node dist/src/scheduler.js",
+    "start-indexer": "npm run build && node dist/src/indexer.js",
+    "start-listener": "npm run build && node dist/src/listener.js",
     "build": "npm run lint && tsc -p .",
     "postbuild": "copyfiles --error --up 1 ./src/dbMigrations/*.sql ./dist/src",
     "lint": "eslint \"**/*.{ts,tsx}\"",
