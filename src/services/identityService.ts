@@ -1,15 +1,23 @@
-import { getIdentity, Identity, Page } from "@npmjs_tdsoftware/subidentity";
+import { getIdentity, Identity, Page, DetailedIdentity } from "@npmjs_tdsoftware/subidentity";
 import { BasicIdentityInfo } from "@npmjs_tdsoftware/subidentity";
 import { identityRepository } from "../repositories/identityRepository";
 import { IdentityEntity } from "../types/entities/IdentityEntity";
 import { paginationUtil } from "./utils/paginationUtil";
 import { u8aToString, hexToU8a } from "@polkadot/util";
 import { chainService } from "./chainService";
+import { governanceService } from "./governanceService";
+import { ChainStatusDTO } from "../types/dtos/ChainStatusDTO";
+import { treasuryService } from "./treasuryService";
 
 export const identityService = {
-    async findOneByWsProviderAndAccountAddress(wsProvider: string, accountAddress: string): Promise<Identity | undefined> {
+
+    async findOneByWsProviderAndAccountAddress(wsProvider: string, accountAddress: string): Promise<DetailedIdentity | undefined> {
         await this.checkWsProvider(wsProvider);
-        return await getIdentity(wsProvider, accountAddress);
+        const identity: DetailedIdentity = await getIdentity(wsProvider, accountAddress);
+        const chain = await chainService.getChainEntityByWsProvider(wsProvider);
+        identity.governance = await governanceService.getActivityForAccountAddress(accountAddress, chain.id);
+        identity.treasury = await treasuryService.getActivityForAccountAddress(accountAddress, chain.id);
+        return identity;
     },
 
     async getAllIdentitiesByWsProvider(wsProvider: string, page: number, limit: number): Promise<Page<Identity>> {
@@ -66,10 +74,11 @@ export const identityService = {
         });
     },
 
-    async checkWsProvider(wsProvider: string): Promise<void> {
+    async checkWsProvider(wsProvider: string): Promise<ChainStatusDTO> {
         const chain = await chainService.findByWsProvider(wsProvider);
         if (!chain?.implementsIdentityPallet) throw new Error("400:Chain does not implement the identity pallet.");
         else if (!chain?.isArchiveNode) throw new Error("400:Provided node is not an archive node.");
         else if (!chain?.isIndexed) throw new Error("400:Chain is not indexed yet.");
+        return chain;
     }
 };

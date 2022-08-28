@@ -1,6 +1,6 @@
 {
   "name": "subidentity-backend",
-  "version": "1.0.0",
+  "version": "0.3.0",
   "description": "Backend for SubIdentity Project for W3F",
   "main": "src/api.ts",
   "engines": {
@@ -8,7 +8,7 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "@npmjs_tdsoftware/subidentity": "^0.0.8",
+    "@npmjs_tdsoftware/subidentity": "^0.3.1",
     "@types/node-cron": "^3.0.1",
     "body-parser": "^1.20.0",
     "cors": "^2.8.5",
@@ -23,6 +23,7 @@
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",
     "@types/jest": "^27.4.1",
+    "@types/minimist": "^1.2.2",
     "@types/mysql": "^2.15.21",
     "@types/node": "^17.0.23",
     "@types/supertest": "^2.0.12",
@@ -40,6 +41,9 @@
   },
   "scripts": {
     "dev-api": "nodemon src/api.ts",
+    "dev-indexer": "nodemon src/indexer.ts --endpoint= --from= --to=",
+    "dev-exec": "nodemon src/executionManager.ts --endpoint= & nodemon src/listener.ts --endpoint=",
+    "dev-listener": "nodemon src/listener.ts --endpoint=",
     "dev-scheduler": "nodemon src/scheduler.ts",
     "dev": "npm run dev-api",
     "start-api": "npm run build && node dist/src/api.js",

@@ -19,7 +19,7 @@ export interface QueryResult {
  * We are using one global connection to the MySQL database in the whole
  * NodeJS app instance.
  */
-export const connection = mysql.createPool({ // TODO: move to .env
+export const connection = mysql.createPool({
     host: process.env.DATABASE_HOST,
     user: process.env.DATABASE_USER,
     password: process.env.DATABASE_PASSWORD,

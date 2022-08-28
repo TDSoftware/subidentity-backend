@@ -5,9 +5,9 @@ import { getChainName, getTokenDetails, implementsIdentityPallet, isArchiveNode 
 import { ChainStatus } from "../types/enums/ChainStatus";
 import { Token } from "@npmjs_tdsoftware/subidentity";
 import { wsProviderService } from "./wsProviderService";
+import { ChainEntity } from "../types/entities/ChainEntity";
 
 export const chainService = {
-
 
     async createChain(wsProvider: string): Promise<ChainStatusDTO | undefined> {
         const chainName = await getChainName(wsProvider);
@@ -56,5 +56,12 @@ export const chainService = {
         }
         chain.status = status;
         chainRepository.update(chain);
+    },
+
+    async getChainEntityByWsProvider(wsProvider: string): Promise<ChainEntity> {
+        const chain = await chainRepository.findByWsProvider(wsProvider);
+        if (!chain)
+            throw new Error("Could not find chain with given wsProvider");
+        return chain;
     }
 };

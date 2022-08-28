@@ -12,8 +12,7 @@ class ChainRepository extends MySQLRepository<ChainEntity> {
     }
 
     async findByWsProvider(wsProvider: string): Promise<ChainEntity | undefined> {
-        const query = `SELECT ${this.tableName}.chain_name, ${this.tableName}.status, ${this.tableName}.is_archive_node
-                       FROM ${this.tableName} 
+        const query = `SELECT * FROM ${this.tableName} 
                        INNER JOIN ${wsProviderRepository.tableName} ON ${this.tableName}.id = ${wsProviderRepository.tableName}.chain_id
                        WHERE ${wsProviderRepository.tableName}.address=${escape(wsProvider)}`;
         return (await runSelectQuery<ChainEntity>(query))[0];

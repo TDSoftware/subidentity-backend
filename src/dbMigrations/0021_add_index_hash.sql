@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_hash_unique ON block (hash);
