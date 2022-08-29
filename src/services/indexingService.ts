@@ -652,14 +652,15 @@ export const indexingService = {
     * This function parses the claim bounty extrinsic and creates a bounty with the claim status.
     */
     async parseClaimBounty(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
-        const claimedEvent = extrinsicEvents.filter((ev: Record<string, AnyJson>) => ev.section === EventSection.Bounties && ev.method === EventMethod.BountyClaimed);
+        const claimedEvent = extrinsicEvents.find((ev: Record<string, AnyJson>) => ev.section === EventSection.Bounties && ev.method === EventMethod.BountyClaimed);
         if (claimedEvent) {
             const ce = JSON.parse(JSON.stringify(claimedEvent));
-            const claimEventData = JSON.parse(JSON.stringify(ce.data));
-            const bountyEntry = await bountyRepository.getByBountyIdAndChainId(claimEventData[0], chain.id);
+            const claimEventData = ce.data;
+            const bountyIndex = claimEventData[0];
+            const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyIndex, chain.id);
             if (!bountyEntry) {
                 const bounty = <BountyEntity>{
-                    bounty_id: claimEventData[0],
+                    bounty_id: bountyIndex,
                     status: BountyStatus.Claimed,
                     chain_id: chain.id,
                     modified_at: blockEntity.id
