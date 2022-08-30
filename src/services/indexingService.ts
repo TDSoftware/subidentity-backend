@@ -165,8 +165,6 @@ export const indexingService = {
                 if (extrinsicMethod === ExtrinsicMethod.PROPOSE) await this.parseDemocracyPropose(extrinsicEvents, args, blockEntity, extrinsicSigner);
                 if (extrinsicMethod === ExtrinsicMethod.SECOND) await this.parseDemocracySecond(extrinsicEvents, blockEntity);
                 if (extrinsicMethod === ExtrinsicMethod.VOTE) await this.parseDemocracyVote(args, blockEntity, extrinsicSigner);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
-                if (extrinsicMethod === ExtrinsicMethod.NOTEIMMINENTPREIMAGE) await this.parseDemocracyNotePreimage(extrinsicEvents, args, blockEntity);
                 break;
             case (ExtrinsicSection.TIPS):
                 await this.parseTipExtrinsics(extrinsicEvents, extrinsicMethod, args, blockEntity, extrinsicSigner);
@@ -190,6 +188,7 @@ export const indexingService = {
     */
     async parseProxyProxy(extrinsicSection: string, extrinsicMethod: string, extrinsicEvents: Record<string, AnyJson>[], extrinsic: any, args: any, blockEvents: Vec<FrameSystemEventRecord>, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         extrinsic = args.call;
+        extrinsicSigner = args.real;
         extrinsicMethod = extrinsic.method;
         extrinsicSection = extrinsic.section;
         args = extrinsic.args;
@@ -653,14 +652,15 @@ export const indexingService = {
     * This function parses the claim bounty extrinsic and creates a bounty with the claim status.
     */
     async parseClaimBounty(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
-        const claimedEvent = extrinsicEvents.filter((ev: Record<string, AnyJson>) => ev.section === EventSection.Bounties && ev.method === EventMethod.BountyClaimed);
+        const claimedEvent = extrinsicEvents.find((ev: Record<string, AnyJson>) => ev.section === EventSection.Bounties && ev.method === EventMethod.BountyClaimed);
         if (claimedEvent) {
             const ce = JSON.parse(JSON.stringify(claimedEvent));
-            const claimEventData = JSON.parse(JSON.stringify(ce.data));
-            const bountyEntry = await bountyRepository.getByBountyIdAndChainId(claimEventData[0], chain.id);
+            const claimEventData = ce.data;
+            const bountyIndex = claimEventData[0];
+            const bountyEntry = await bountyRepository.getByBountyIdAndChainId(bountyIndex, chain.id);
             if (!bountyEntry) {
                 const bounty = <BountyEntity>{
-                    bounty_id: claimEventData[0],
+                    bounty_id: bountyIndex,
                     status: BountyStatus.Claimed,
                     chain_id: chain.id,
                     modified_at: blockEntity.id
@@ -677,7 +677,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the council vote extrinsic and creates or updates the corresponding database tables. (council_motion_vote, council_motion)
+    * This function parses the council vote extrinsic and creates or updates the corresponding entities in the database. (council_motion_vote, council_motion)
     */
     async parseCouncilVote(args: any, blockEntity: BlockEntity, chain: ChainEntity, extrinsicSigner: string): Promise<void> {
         const councilMotionEntry = await councilMotionRepository.getByMotionHash(args.proposal);
@@ -708,7 +708,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses multiple tip extrinsics and creates or updates the corresponding database tables. (tip_proposal, tip)
+    * This function parses multiple tip extrinsics and creates or updates the corresponding entities in the database. (tip_proposal, tip)
     */
     async parseTipExtrinsics(extrinsicEvents: Record<string, AnyJson>[], extrinsicMethod: any, args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         switch (extrinsicMethod) {
@@ -889,14 +889,14 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the democracy propose extrinsic and creates or updates the corresponding database tables. (proposal)
+    * This function parses the democracy propose extrinsic and creates or updates the corresponding entities in the database. (proposal)
     */
     async parseDemocracyPropose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const proposalHash = JSON.parse(JSON.stringify(args.proposal_hash));
         const proposeEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.Democracy);
         if (proposeEvent) {
             const proposal_index = JSON.parse(JSON.stringify(proposeEvent.data))[0];
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
+            const proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(proposal_index, chain.id, ProposalType.Democracy);
             if (!proposal) {
                 const proposalEntity = <ProposalEntity>{
                     chain_id: chain.id,
@@ -926,66 +926,7 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the democracy notePreimage extrinsic and creates or updates the corresponding database tables. (proposal)
-    */
-    async parseDemocracyNotePreimage(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
-        let decoded_proposal: Record<string, AnyJson> | null = null;
-        const preImageEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.PreimageNoted && e.section === EventSection.Democracy);
-        if (preImageEvent) {
-            let preImageMethod: string = <string>{};
-            let preImageSection: string = <string>{};
-
-            // decoding is a little janky but this should work for now, manual adjustment after indexing may be required
-            const encoded_proposal = args.encoded_proposal.toString();
-            try {
-                decoded_proposal = api.createType("Proposal", encoded_proposal).toHuman();
-            } catch (e) {
-                try {
-                    decoded_proposal = api.createType("Call", encoded_proposal).toHuman();
-                } catch (e) {
-                    blockEntity.error = true;
-                    blockEntity.error_message = String(e);
-                    await blockRepository.update(blockEntity);
-                }
-            }
-
-            if (decoded_proposal) {
-                preImageMethod = JSON.parse(JSON.stringify(decoded_proposal!.method));
-                preImageSection = JSON.parse(JSON.stringify(decoded_proposal!.section));
-            } else if (!decoded_proposal) {
-                preImageMethod = "ERROR";
-                preImageSection = "ERROR";
-            }
-
-            const proposal_hash = JSON.parse(JSON.stringify(preImageEvent.data))[0];
-            const account = await accountRepository.getOrCreateAccount(JSON.parse(JSON.stringify(preImageEvent.data))[1], chain.id);
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposal_hash, chain.id);
-            if (proposal) {
-                proposal.section = preImageSection;
-                proposal.method = preImageMethod;
-                proposal.proposed_by = account.id;
-                if (await blockRepository.hasHigherBlockNumber(blockEntity.id, proposal.modified_at)) {
-                    proposal.status = ProposalStatus.Proposed;
-                    proposal.modified_at = blockEntity.id;
-                }
-                proposalRepository.update(proposal);
-            } else {
-                const proposalEntity = <ProposalEntity>{
-                    chain_id: chain.id,
-                    motion_hash: proposal_hash,
-                    section: preImageSection,
-                    method: preImageMethod,
-                    proposed_by: account.id,
-                    modified_at: blockEntity.id,
-                    status: ProposalStatus.Proposed
-                };
-                proposalRepository.insert(proposalEntity);
-            }
-        }
-    },
-
-    /*
-    * This function parses the democracy second extrinsic and creates or updates the corresponding database tables. (proposal, endorsement)
+    * This function parses the democracy second extrinsic and creates or updates the corresponding entities in the database. (proposal, endorsement)
     */
     async parseDemocracySecond(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity): Promise<void> {
 
@@ -1021,32 +962,49 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the democracy vote extrinsic and creates or updates the corresponding database tables. (referendum, referendum_vote)
+    * This function parses the democracy vote extrinsic and creates or updates the corresponding entities in the database. (referendum, referendum_vote)
     */
     async parseDemocracyVote(args: any, blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const referendumIndex = args.ref_index;
-        const voteDetails = JSON.parse(JSON.stringify(args.vote)).Standard;
-        const vote = <ReferendumVoteEntity>{
-            referendum_id: referendumIndex,
-            vote: voteDetails.vote.vote === Vote.Aye,
-            voted_at: blockEntity.id
-        };
-
-        if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
-            vote.locked_value = parseFloat(voteDetails.balance) * 1000;
-        } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
-            vote.locked_value = parseFloat(voteDetails.balance) / 1000;
-        } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
-            vote.locked_value = parseFloat(voteDetails.balance);
-        } else {
-            vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-        }
-
-        if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
-        else {
-            vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
-        }
+        const voteInformation = JSON.parse(JSON.stringify(args.vote));
         const voter = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
+        let voteDetails = <any>{};
+        let vote = <ReferendumVoteEntity>{};
+
+        if (voteInformation.Standard) {
+            voteDetails = voteInformation.Standard;
+            vote = <ReferendumVoteEntity>{
+                referendum_id: referendumIndex,
+                vote: voteDetails.vote.vote === Vote.Aye,
+                voted_at: blockEntity.id
+            };
+
+            if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
+                vote.locked_value = parseFloat(voteDetails.balance) * 1000;
+            } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
+                vote.locked_value = parseFloat(voteDetails.balance) / 1000;
+            } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
+                vote.locked_value = parseFloat(voteDetails.balance);
+            } else {
+                vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+            }
+
+            if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
+            else {
+                vote.conviction = parseFloat(voteDetails.vote.conviction.replace(/[^0-9.]/g, ""));
+            }
+
+        } else {
+            voteDetails = voteInformation;
+            vote = <ReferendumVoteEntity>{
+                referendum_id: referendumIndex,
+                vote: voteDetails.vote === Vote.Aye,
+                voted_at: blockEntity.id,
+                locked_value: 0,
+                conviction: 0.1
+            };
+        }
+
         vote.voter = voter.id;
 
         const referendum = await referendumRepository.getByReferendumIndexAndChainId(vote.referendum_id, chain.id);
@@ -1070,15 +1028,15 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the technicalCommittee close extrinsic and creates or updates the corresponding database tables. (referendum, proposal)
+    * This function parses the technicalCommittee close extrinsic and creates or updates the corresponding entities in the database. (referendum, proposal)
     */
     async parseTechnicalCommitteeClose(extrinsicEvents: Record<string, AnyJson>[], args: any, blockEntity: BlockEntity): Promise<void> {
         const democracyStartedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Started && e.section === EventSection.Democracy);
         const technicalCommitteeEvents = extrinsicEvents.filter((e: Record<string, AnyJson>) => e.section === EventSection.TechnicalCommittee);
         const technicalCommitteeCloseEvent = technicalCommitteeEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Closed && e.section === EventSection.TechnicalCommittee);
         const technicalCommitteeHash = JSON.parse(JSON.stringify(technicalCommitteeCloseEvent!.data))[0];
-        let proposal = await proposalRepository.getByMotionHashAndChainId(technicalCommitteeHash, chain.id);
         const technicalCommitteeIndex = args.index;
+        let proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(technicalCommitteeIndex, chain.id, ProposalType.TechnicalCommittee);
         let technicalCommitteeStatus = <string>{};
 
         technicalCommitteeEvents.map(async (event: Record<string, AnyJson>) => {
@@ -1140,15 +1098,15 @@ export const indexingService = {
     },
 
     /*
-    * This function parses the technicalCommittee propose extrinsic and creates or updates the corresponding database tables. (proposal)
+    * This function parses the technicalCommittee propose extrinsic and creates or updates the corresponding entities in the database. (proposal)
     */
     async parseTechnicalCommitteePropose(extrinsicEvents: Record<string, AnyJson>[], blockEntity: BlockEntity, extrinsicSigner: string): Promise<void> {
         const technicalCommitteeProposedEvent = extrinsicEvents.find((e: Record<string, AnyJson>) => e.method === EventMethod.Proposed && e.section === EventSection.TechnicalCommittee);
         if (technicalCommitteeProposedEvent) {
             const proposalHash = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[2];
-            const proposal = await proposalRepository.getByMotionHashAndChainId(proposalHash, chain.id);
-            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             const proposalIndex = JSON.parse(JSON.stringify(technicalCommitteeProposedEvent.data))[1];
+            const proposal = await proposalRepository.getByProposalIndexAndChainIdAndType(proposalIndex, chain.id, ProposalType.TechnicalCommittee);
+            const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
             if (!proposal) {
                 const proposalEntity: ProposalEntity = <ProposalEntity>{
