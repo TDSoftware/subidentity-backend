@@ -25,9 +25,10 @@ startUp();
  *  corresponding URL path.
  */
 function registerRouters(app: Application): void {
-    app.use("/chains", chainRouter);
-    app.use("/version", versionRouter);
-    app.use("/identities", identityRouter);
+    const basePath = config.BASE_PATH ?? "";
+    app.use(basePath + "/chains", chainRouter);
+    app.use(basePath + "/version", versionRouter);
+    app.use(basePath + "/identities", identityRouter);
 }
 
 /**
