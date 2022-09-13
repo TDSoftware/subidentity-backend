@@ -17,12 +17,13 @@ class TipProposalRepository extends MySQLRepository<TipProposalEntity> {
         const query = `SELECT
                 a2.address AS beneficiary,
                 tp.reason,
-                tp.proposed_at as block
+                b.number
             FROM
                 account a
                 JOIN tip_proposal tp ON a.id = tp.finder
                 JOIN account a2 ON tp.beneficiary = a2.id
                     AND a2.chain_id = ${chainId}
+                JOIN block b ON tp.proposed_at = b.id
             WHERE
                 a.address = "${accountAddress}"
                 AND a.chain_id = ${chainId};`;

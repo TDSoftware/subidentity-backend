@@ -21,13 +21,14 @@ class ProposalRepository extends MySQLRepository<ProposalEntity> {
     async getAccountsProposals(accountAddress: string, chainId: number): Promise<ProposalDTO[]> {
         const query = `SELECT
             IFNULL(p.proposal_index, -1) AS proposalIndex,
-            IFNULL(p.proposed_at, -1) AS block,
+            IFNULL(b.number, -1) AS block,
             p.\`type\`,
             IFNULL(r.referendum_index, -1) as referendumIndex
         FROM
             account a
             JOIN proposal p ON p.proposed_by = a.id
             LEFT JOIN referendum r ON r.proposal_id=p.id
+            LEFT JOIN block b ON p.proposed_at=b.id
         WHERE
             a.address = "${accountAddress}"
             AND a.chain_id = ${chainId};`;

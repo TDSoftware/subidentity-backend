@@ -15,13 +15,14 @@ class CouncilMotionVoteRepository extends MySQLRepository<CouncilMotionVoteEntit
 
     async getCouncilMotionVotesByAddressAndChainId(address: string, chainId: number): Promise<CouncilMotionVoteDTO[]> {
         const query = `SELECT
-                cmv.block,
+                b.number,
                 cm.proposal_index as councilMotionIndex,
                 cmv.approved
             FROM
                 account a
                 JOIN council_motion_vote cmv ON cmv.account_id = a.id
                 JOIN council_motion cm ON cmv.council_motion_id=cm.id
+                JOIN block b ON cmv.block=b.id
             WHERE
                 a.address="${address}" and a.chain_id=${chainId}`;
         return await runSelectQuery<CouncilMotionVoteDTO>(query);

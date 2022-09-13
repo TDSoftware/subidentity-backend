@@ -9,7 +9,7 @@ class TipRepository extends MySQLRepository<TipEntity> {
     }
 
     async getAccountsTips(accountAddress: string, chainId: number): Promise<TipDTO[]> {
-        const query = `SELECT t.value, t.tipped_at as block, tp.motion_hash as tipProposalHash FROM account a JOIN tip t ON a.id=t.tipper JOIN tip_proposal tp ON tp.id=t.tip_proposal_id WHERE a.address="${accountAddress}" AND a.chain_id=${chainId};`;
+        const query = `SELECT t.value, b.number, tp.motion_hash as tipProposalHash FROM account a JOIN tip t ON a.id=t.tipper JOIN tip_proposal tp ON tp.id=t.tip_proposal_id JOIN block b ON t.tipped_at=b.id WHERE a.address="${accountAddress}" AND a.chain_id=${chainId};`;
         return await runSelectQuery<TipDTO>(query);
     }
 }
