@@ -14,7 +14,7 @@ class CouncilMotionRepository extends MySQLRepository<CouncilMotionEntity> {
     }
 
     async getCouncilMotionsByAccountAddress(address: string, chainId: number): Promise<CouncilMotionDTO[]> {
-        const query = `SELECT cm.proposal_index as \`index\`, b.number FROM account a JOIN council_motion cm ON cm.proposed_by=a.id JOIN block b ON cm.from_block=b.id WHERE a.address = "${address}" AND a.chain_id=${chainId};`;
+        const query = `SELECT cm.proposal_index as \`index\`, b.number AS block FROM account a JOIN council_motion cm ON cm.proposed_by=a.id JOIN block b ON cm.from_block=b.id WHERE a.address = "${address}" AND a.chain_id=${chainId};`;
         return await runSelectQuery<CouncilMotionDTO>(query);
     }
 }

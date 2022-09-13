@@ -16,7 +16,7 @@ class ReferendumVoteRepository extends MySQLRepository<ReferendumVoteEntity> {
 
     async getAccountsReferendumVotes(accountAddress: string, chainId: number): Promise<ReferendumVoteDTO[]> {
         const query = `SELECT
-            b.number,
+            b.number AS block,
             r.referendum_index AS referendumIndex,
             rv.vote
         FROM
