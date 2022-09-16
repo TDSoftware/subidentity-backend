@@ -246,13 +246,13 @@ export const indexingService = {
             }
 
             if (!councilMotionEntry) {
-                councilMotionRepository.insert(councilMotion);
+                await councilMotionRepository.insert(councilMotion);
             } else if (councilMotionEntry) {
                 councilMotionEntry.proposal_index = councilMotion.proposal_index;
                 councilMotionEntry.to_block = councilMotion.to_block;
                 councilMotionEntry.status = councilMotion.status;
                 councilMotionEntry.modified_at = blockEntity.id;
-                councilMotionRepository.update(councilMotionEntry);
+                await councilMotionRepository.update(councilMotionEntry);
             }
         }
 
@@ -286,13 +286,13 @@ export const indexingService = {
                 }
             }
             if (!bountyEntry) {
-                bountyRepository.insert(bounty);
+                await bountyRepository.insert(bounty);
             } else {
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, bountyEntry.modified_at)) {
                     bountyEntry.status = bounty.status;
                     bountyEntry.modified_at = blockEntity.id;
                 }
-                bountyRepository.update(bountyEntry);
+                await bountyRepository.update(bountyEntry);
             }
         }
     },
@@ -358,7 +358,7 @@ export const indexingService = {
                     }
                     treasuryProposal.chain_id = chain.id;
                     treasuryProposal.modified_at = blockEntity.id;
-                    treasuryProposalRepository.insert(treasuryProposal);
+                    await treasuryProposalRepository.insert(treasuryProposal);
                 }
             }
         }
@@ -400,7 +400,7 @@ export const indexingService = {
             entry.modified_at = blockEntity.id;
 
             if (!bountyEntry) {
-                bountyRepository.insert(entry);
+                await bountyRepository.insert(entry);
             } else {
                 bountyEntry.bounty_id = entry.id;
                 bountyEntry.description = entry.description;
@@ -412,7 +412,7 @@ export const indexingService = {
                     bountyEntry.status = entry.status;
                     bountyEntry.modified_at = entry.modified_at;
                 }
-                bountyRepository.update(bountyEntry);
+                await bountyRepository.update(bountyEntry);
             }
         }
     },
@@ -447,7 +447,7 @@ export const indexingService = {
                     tpEntry.status = TreasuryProposalStatus.Proposed;
                     tpEntry.modified_at = blockEntity.id;
                 }
-                treasuryProposalRepository.update(tpEntry);
+                await treasuryProposalRepository.update(tpEntry);
             } else {
                 const tp = <TreasuryProposalEntity>{
                     proposal_id: proposalId,
@@ -458,7 +458,7 @@ export const indexingService = {
                     modified_at: blockEntity.id,
                     value: value
                 };
-                treasuryProposalRepository.insert(tp);
+                await treasuryProposalRepository.insert(tp);
             }
         }
     },
@@ -499,7 +499,7 @@ export const indexingService = {
                         proposal.status = ProposalStatus.Tabled;
                         proposal.modified_at = blockEntity.id;
                     }
-                    proposalRepository.update(proposal);
+                    await proposalRepository.update(proposal);
                     proposalId = proposal.id;
                 }
             } else proposalId = null;
@@ -515,7 +515,7 @@ export const indexingService = {
                     proposal_id: proposalId,
                     modified_at: blockEntity.id
                 };
-                referendumRepository.insert(referendumEntity);
+                await referendumRepository.insert(referendumEntity);
             } else {
                 referendum.started_at = blockEntity.id;
                 referendum.vote_threshold = voteThreshold;
@@ -524,7 +524,7 @@ export const indexingService = {
                     referendum.status = ReferendumStatus.Started;
                     referendum.modified_at = blockEntity.id;
                 }
-                referendumRepository.update(referendum);
+                await referendumRepository.update(referendum);
             }
         }
 
@@ -539,12 +539,12 @@ export const indexingService = {
                     ended_at: blockEntity.id,
                     modified_at: blockEntity.id
                 };
-                referendumRepository.insert(referendumEntity);
+                await referendumRepository.insert(referendumEntity);
             } else {
                 referendum.status = ReferendumStatus.Executed;
                 referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
-                referendumRepository.update(referendum);
+                await referendumRepository.update(referendum);
             }
         }
 
@@ -558,13 +558,13 @@ export const indexingService = {
                     status: ReferendumStatus.Passed,
                     modified_at: blockEntity.id
                 };
-                referendumRepository.insert(referendumEntity);
+                await referendumRepository.insert(referendumEntity);
             } else {
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, referendum.modified_at)) {
                     referendum.status = ReferendumStatus.Passed;
                     referendum.modified_at = blockEntity.id;
                 }
-                referendumRepository.update(referendum);
+                await referendumRepository.update(referendum);
             }
         }
 
@@ -579,12 +579,12 @@ export const indexingService = {
                     ended_at: blockEntity.id,
                     modified_at: blockEntity.id
                 };
-                referendumRepository.insert(referendumEntity);
+                await referendumRepository.insert(referendumEntity);
             } else {
                 referendum.status = ReferendumStatus.NotPassed;
                 referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
-                referendumRepository.update(referendum);
+                await referendumRepository.update(referendum);
             }
         }
 
@@ -599,12 +599,12 @@ export const indexingService = {
                     ended_at: blockEntity.id,
                     modified_at: blockEntity.id
                 };
-                referendumRepository.insert(referendumEntity);
+                await referendumRepository.insert(referendumEntity);
             } else {
                 referendum.status = ReferendumStatus.Cancelled;
                 referendum.modified_at = blockEntity.id;
                 referendum.ended_at = blockEntity.id;
-                referendumRepository.update(referendum);
+                await referendumRepository.update(referendum);
             }
         }
 
@@ -636,14 +636,14 @@ export const indexingService = {
                 treasuryProposal.beneficiary = beneficiaryAccount.id;
                 treasuryProposal.chain_id = chain.id;
                 treasuryProposal.modified_at = blockEntity.id;
-                treasuryProposalRepository.insert(treasuryProposal);
+                await treasuryProposalRepository.insert(treasuryProposal);
             } else {
                 if (await blockRepository.hasHigherBlockNumber(blockEntity.id, existingProposal.modified_at)) {
                     existingProposal.status = TreasuryProposalStatus.Awarded;
                     existingProposal.modified_at = blockEntity.id;
                 }
                 existingProposal.beneficiary = beneficiaryAccount.id;
-                treasuryProposalRepository.update(existingProposal);
+                await treasuryProposalRepository.update(existingProposal);
             }
         }
     },
@@ -703,7 +703,7 @@ export const indexingService = {
                 approved: approved,
                 block: blockEntity.id
             };
-            councilMotionVoteRepository.insert(vote);
+            await councilMotionVoteRepository.insert(vote);
         }
     },
 
@@ -841,7 +841,7 @@ export const indexingService = {
                             value: value,
                             modified_at: blockEntity.id
                         };
-                        tipProposalRepository.insert(tipProposal);
+                        await tipProposalRepository.insert(tipProposal);
                     } else if (tipProposalEntry) {
                         tipProposalEntry.status = TipProposalStatus.Closed;
                         tipProposalEntry.modified_at = blockEntity.id;
@@ -1055,7 +1055,7 @@ export const indexingService = {
             proposal.type = ProposalType.TechnicalCommittee;
             proposal.status = technicalCommitteeStatus;
             proposal.modified_at = blockEntity.id;
-            proposalRepository.update(proposal);
+            await proposalRepository.update(proposal);
         } else {
             const proposalEntity = <ProposalEntity>{
                 chain_id: chain.id,
@@ -1083,7 +1083,7 @@ export const indexingService = {
                     modified_at: blockEntity.id,
                     proposal_id: proposal.id
                 };
-                referendumRepository.insert(referendumEntity);
+                await referendumRepository.insert(referendumEntity);
             } else {
                 referendum.started_at = blockEntity.id;
                 referendum.vote_threshold = voteThreshold;
@@ -1092,7 +1092,7 @@ export const indexingService = {
                     referendum.status = ReferendumStatus.Started;
                     referendum.modified_at = blockEntity.id;
                 }
-                referendumRepository.update(referendum);
+                await referendumRepository.update(referendum);
             }
         }
     },
@@ -1119,7 +1119,7 @@ export const indexingService = {
                     modified_at: blockEntity.id,
                     type: ProposalType.TechnicalCommittee
                 };
-                proposalRepository.insert(proposalEntity);
+                await proposalRepository.insert(proposalEntity);
             } else if (proposal) {
                 proposal.proposed_at = blockEntity.id;
                 proposal.proposed_by = account.id;
@@ -1128,7 +1128,7 @@ export const indexingService = {
                     proposal.status = ProposalStatus.Proposed;
                     proposal.modified_at = blockEntity.id;
                 }
-                proposalRepository.update(proposal);
+                await proposalRepository.update(proposal);
             }
         }
     }
