@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { LogEntity } from "../../types/entities/LogEntity";
 import { logRepository } from "../../repositories/logRepository";
+import { SHA1 } from "crypto-js";
 
 export const trackingRouter = Router();
 
@@ -13,7 +14,8 @@ trackingRouter.post("/", async (req: Request, res: Response, next: NextFunction)
             throw new Error("400:Body parameter missing:info");
 
         const log = <LogEntity>{}
-        log.ip = req.socket.remoteAddress ?? "";
+        // hash the ip address with SHA1        
+        log.ip = SHA1(req.socket.remoteAddress ?? "").toString();
         log.timestamp = new Date().toISOString();
         log.event = req.body.event;
         log.info = req.body.info;
