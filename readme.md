@@ -139,9 +139,22 @@ By default, the scheduler is set up to fetch identities from known chains at eve
 ℹ️ If the API described above is used for requesting the chain status or identities for a node endpoint for the first time, the respective chain is added to the database if it implements the identity pallet, and the provided node is an archive node. When the scheduled indexing is running again, this chain will be indexed automatically. Thereupon the API Service can be used to fetch identities from this chain.
 
 ## <a id="generalIndexing"></a> General Indexing
-The indexer uses the polkadot js api to retrieve the data to our database. To index a chain, you first have to call the /chain/status?parameter=wss://endpoint.rpc.url route to add the corresponding chain to the database (the chain to be indexed has to implement the identity pallet to be added to the db). To increase efficiency, the indexer will determine the amount of cpu cores in the executing machine and will create batches of blocks to separately be indexed by different workers. When starting the indexer, two different scripts will be executed concurrently: the indexer and a block listener. The block listener will subscribe to new blocks and run the indexing functions on them. The indexing process can take a while depending on the hardware it is executed on and the performance of the given endpoint. If for any reason the indexer crashes, it can be restarted by using the same command. It will recalculate the batches and pick up where it left off. When starting the indexer for a chain with custom pallets, there might be warning messages popping up.
+The indexer uses the polkadot js api to retrieve the data to our database. To index a chain, you first have to call the /chain/status?parameter=wss://endpoint.rpc.url route to add the corresponding chain to the database (the chain to be indexed has to implement the identity pallet to be added to the db). To increase efficiency, the indexer will determine the amount of cpu cores in the executing machine and will create batches of blocks to separately be indexed by different workers. When starting the indexer, two different scripts will be executed concurrently: the indexer and a block listener. The block listener will subscribe to new blocks and run the indexing functions on them. The indexer will separate the unindexed blocks of a chain and turn them into batches to distribute the workload among the available cpu cores. The indexing process can take a while (possibly multiple days) depending on the hardware it is executed on and the performance of the given endpoint. It is recommended to run this service on a machine with at least 16 CPU cores, preferably more. If for any reason the indexer crashes, it can be restarted by using the same command. It will recalculate the batches and pick up where it left off. When starting the indexer for a chain with custom pallets, there might be warning messages popping up.
 
-Indexer and listener concurrently (given --endpoint for both scripts in package.json): 
+## Indexing Getting Started
+
+(!) Before running any of the following commands, call this route with the corresponding endpoint.
+This will add the wsProvider to the database, which is a necessary step before starting any of the indexing services.
+Furthermore, the chain can only be added to the database if it implements the identity pallet.
+```
+.../chain/status?parameter=wss://endpoint.rpc.url 
+```
+
+Indexer and listener concurrently (given --endpoint for both scripts in package.json):
+
+The script is defined in the package.json file and will only function properly on linux/ MacOS operating systems.
+Running the script on windows will require you to replace the & with && in the package.json script. 
+
 ```
 npm run dev-exec 
 ```
