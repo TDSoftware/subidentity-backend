@@ -1,4 +1,7 @@
 # SubIdentity Backend
+
+[![Tests](https://github.com/TDSoftware/subidentity-backend/actions/workflows/runUnitTests.yml/badge.svg)](https://github.com/TDSoftware/subidentity-backend/actions/workflows/runUnitTests.yml)
+
 SubIdentity backend is a Node.js backend developed for the [SubIdentity web application](https://github.com/TDSoftware/subidentity-webapp) that can be used to index a Substrate based chain which is implementing the identity pallet by providing an archive node. For indexed chains it can be used to search for identities e.g., in order to improve the [SubIdentity web application's](https://github.com/TDSoftware/subidentity-webapp) performance.
 
 The project consists of 4 Node.js applications. An indexer, a listener, a scheduler and an API service. 
@@ -45,6 +48,12 @@ The application is using migration files to add, update or delete database table
 Open a terminal in your project folder and run:
 ``` bash
 npm install
+```
+
+### Run database via Docker
+Have Docker installed and running. Then open a terminal an run:
+```
+docker-compose up -d
 ```
 
 ### Compile and run for development
