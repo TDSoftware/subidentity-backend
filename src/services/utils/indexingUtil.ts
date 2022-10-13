@@ -1,9 +1,8 @@
-import { decode } from 'punycode';
-import { ChainEntity } from '../../types/entities/ChainEntity';
-import { u8aToString } from '@polkadot/util';
+import { ChainEntity } from "../../types/entities/ChainEntity";
+import { u8aToString } from "@polkadot/util";
 
 // parses the different types of amounts the polkadot js api returns
-export function parseAmount(amount: any, chain: ChainEntity) {
+export function parseAmount(amount: any, chain: ChainEntity): number {
     let value = <number>{};
     if (String(amount).includes("k" + chain.token_symbol!)) {
         value = parseFloat(amount) * 1000;
@@ -18,8 +17,8 @@ export function parseAmount(amount: any, chain: ChainEntity) {
 }
 
 // checks if the response is a byte, if so, it converts it to a string, else return the string
-export function translateIfByte(input: any) {
-    if (input.includes("0x")) {
+export function translateIfByte(input: string): string {
+    if (input.startsWith("0x")) {
         return u8aToString(Buffer.from(input.substring(2), "hex"));
     }
     return input;

@@ -2,7 +2,11 @@
 SubIdentity backend is a Node.js backend developed for the [SubIdentity web application](https://github.com/TDSoftware/subidentity-webapp) that can be used to index a Substrate based chain which is implementing the identity pallet by providing an archive node. For indexed chains it can be used to search for identities e.g., in order to improve the [SubIdentity web application's](https://github.com/TDSoftware/subidentity-webapp) performance.
 
 The project consists of 4 Node.js applications. An indexer, a listener, a scheduler and an API service. 
-You can find an illustration of the SubIdentity project architecture [here](./docs/architecture.svg). In order to be able to use the full functionality of the project, the API service, the listener and the scheduler must both be running. The wanted attached chains need to be indexed before use.
+You can find an illustration of the SubIdentity project architecture [here](./docs/architecture.svg). In order to be able to use the full functionality of the project, the API service, the listener, the scheduler and the MySQL database must be running. 
+
+> The wanted attached chains need to be indexed before use.
+
+## Components
 
 ### API Service
 The API Service is providing the API to be consumed e.g., by the [SubIdentity web application](https://github.com/TDSoftware/subidentity-webapp) to retrieve detailed information about identities on substrate based chains. See chapter [API Documentation](#apiDocumentation) for more information. 
@@ -15,11 +19,6 @@ After the chain is indexed by the Indexer, the Listener keeps the data in the My
 
 ### The Scheduler
 The Scheduler is used to fetch and store basic information about identities from Substrate based chains regularly in a MySQL Database to increase performance. 
-
-### Installs dependencies
-```
-npm install
-```
 
 ### MySQL Datatbase
 
@@ -39,23 +38,31 @@ The application is using migration files to add, update or delete database table
 
 ℹ️ After a change in the migrations files or before the first startup of the scheduler, the API Service needs to be run as described below, to migrate the database correctly.
 
-### Compiles and hot-reloads for development
-API service:
-```
-npm run dev-api
+## Get Started
+
+### Install dependencies
+
+Open a terminal in your project folder and run:
+``` bash
+npm install
 ```
 
-Scheduler:
-```
+### Compile and run for development
+```bash
+# API Service
+npm run dev-api 
+
+# Scheduler
 npm run dev-scheduler
 ```
 
-### Compiles for production
+### Compile for production
 ```bash
+# Will compile typrscript to javascript and copies files into the "./dist" folder:
 npm run build
 ```
 
-### Compiles and runs for production
+### Compile and run for production
 
 ```bash
 # Run API:
@@ -72,18 +79,21 @@ npm run start-indexer
 ```
 
 
-### Runs your unit tests
-Core functions are covered by unit tests to ensure functionality and robustness. To run the unit tests use:
+### Run tests
+Core functions are covered by unit and integration tests to ensure functionality and robustness. 
 
-```
-npm run test
+> ⚡ You need to have the database running during running the tests!
+
+To run the tests use the following command:
+```bash
+npm test
 ```
 
 ### Lints and fixes files
 
 💡 Hint: Set up your IDE to automatically run that on save. Works in VS Code and IntelliJ.
 
-```
+```bash
 npm run lint
 ```
 
