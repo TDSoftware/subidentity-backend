@@ -9,6 +9,9 @@ You can find an illustration of the SubIdentity project architecture [here](./do
 
 > The wanted attached chains need to be indexed before use.
 
+
+<hr />
+
 ## Components
 
 ### API Service
@@ -41,6 +44,9 @@ The application is using migration files to add, update or delete database table
 
 ℹ️ After a change in the migrations files or before the first startup of the scheduler, the API Service needs to be run as described below, to migrate the database correctly.
 
+
+<hr />
+
 ## Get Started
 
 ### Install dependencies
@@ -63,9 +69,12 @@ npm run dev-api
 
 # Scheduler
 npm run dev-scheduler
+
+# Run listener:
+npm run dev-listener
 ```
 
-### Compile for production
+### Compile for production (w/o run)
 ```bash
 # Will compile typrscript to javascript and copies files into the "./dist" folder:
 npm run build
@@ -82,23 +91,22 @@ npm run start-scheduler
 
 # Run listener:
 npm run start-listener
-
-# Run indexer:
-npm run start-indexer
 ```
+
+> To start the indexer, see the part below.
 
 
 ### Run tests
 Core functions are covered by unit and integration tests to ensure functionality and robustness. 
 
-> ⚡ You need to have the database running during running the tests!
+❗ You need to have the database running during running the tests!
 
 To run the tests use the following command:
 ```bash
 npm test
 ```
 
-### Lints and fixes files
+### Lint and auto fix files
 
 💡 Hint: Set up your IDE to automatically run that on save. Works in VS Code and IntelliJ.
 
@@ -106,85 +114,88 @@ npm test
 npm run lint
 ```
 
-## <a id="apiDocumentation"></a> API Documentation
+<hr />
+
+## <a id="apiDocumentation"></a> API
 
 In this chapter the available API is described. `http://localhost:5001/` is the default base URL of the API Service if you are running the application locally. For using the API you need to adjust the requests to fit your base URL.
 
 
-### getIdentities
+### Get Identities
 Returns a page of all identities of the chain of the provided wsProvider. Adjust the value for `wsProvider` to query from the respective chain of the given node endpoint. Adjust the value for `page` (page index to load, ℹ️ index of first page is 1) and `limit` (how many items on one page) to your needs.
 
 Example request:
-```
+```bash
 curl --location -g --request GET 'http://localhost:5001/identities?wsProvider=wss://rpc.polkadot.io&page=1&limit=5'
 ```
 
-### searchIdentities
+### Search Identities
 Returns a page of identities of the chain of the provided wsProvider fitting the search term. Adjust the value for `wsProvider` to query the corresponding chain of the specified node endpoint, replace `SEARCHKEY` with the desired search term and adjust the value for `page` (page index to load, ℹ️ index of first page is 1) and `limit` (how many items on one page) to your needs.
 
 Example request:
-```
+```bash
 curl --location --request GET 'http://localhost:5001/identities/search?wsProvider=wss://rpc.polkadot.io&searchKey=SEARCHKEY&page=1&limit=5'
 ```
 
-### getIdentity
+### Get Identity
 Returns an identity of the chain of the provided wsProvider for the given address. Adjust the value for `wsProvider` to query from the respective chain of the given node endpoint and replace `ADDRESS` with the address of the identity to request.
 
 Example request:
-```
+```bash
 curl --location --request GET 'http://localhost:5001/identities/ADDRESS?wsProvider=wss://rpc.polkadot.io'
 ```
 
-### getChainStatus
+### Get Chain Status
 Returns the status of the chain of provided wsProvider. Adjust the value for `wsProvider` to query from the respective chain of the given node endpoint.
 
 Example request:
-```
+```bash
 curl --location --request GET 'http://localhost:5001/chains/status?wsProvider=wss://rpc.polkadot.io'
 ```
 
 
-### version
+### Get Version
 Returns the version and git commit hash of the application.
 
 Example request:
-```
+```bash
 curl --location --request GET 'http://localhost:5001/version'
 ```
+<hr />
 
-## Identity Indexing
+## Indexer
+
+### Identity Indexing
 By default, the scheduler is set up to fetch identities from known chains at every 15th minute (e.g. 9:00, 9:15, 9:30, ...). Depending on the use case this value can be adjusted. Therefore, you need to adjust the cron schedule in [scheduler.ts](./src/scheduler.ts). For more information regarding the adjustment read about [node-cron](https://www.npmjs.com/package/node-cron).
 
 ℹ️ If the API described above is used for requesting the chain status or identities for a node endpoint for the first time, the respective chain is added to the database if it implements the identity pallet, and the provided node is an archive node. When the scheduled indexing is running again, this chain will be indexed automatically. Thereupon the API Service can be used to fetch identities from this chain.
 
-## <a id="generalIndexing"></a> General Indexing
-The indexer uses the polkadot js api to retrieve the data to our database. To index a chain, you first have to call the /chain/status?parameter=wss://endpoint.rpc.url route to add the corresponding chain to the database (the chain to be indexed has to implement the identity pallet to be added to the db). To increase efficiency, the indexer will determine the amount of cpu cores in the executing machine and will create batches of blocks to separately be indexed by different workers. When starting the indexer, two different scripts will be executed concurrently: the indexer and a block listener. The block listener will subscribe to new blocks and run the indexing functions on them. The indexer will separate the unindexed blocks of a chain and turn them into batches to distribute the workload among the available cpu cores. The indexing process can take a while (possibly multiple days) depending on the hardware it is executed on and the performance of the given endpoint. It is recommended to run this service on a machine with at least 16 CPU cores, preferably more. If for any reason the indexer crashes, it can be restarted by using the same command. It will recalculate the batches and pick up where it left off. When starting the indexer for a chain with custom pallets, there might be warning messages popping up.
+### <a id="generalIndexing"></a> General Indexing
+The indexer uses the Polkadot JS API to retrieve and save the data to our MySQL database. To index a chain, you first have to call the /chain/status?parameter=wss://endpoint.rpc.url route to add the corresponding chain to the database (the chain to be indexed has to implement the identity pallet). 
 
-## Indexing Getting Started
+To increase efficiency, the indexer will determine the amount of cpu cores in the executing machine and will create batches of blocks to separately be indexed by different workers. When starting the indexer, two different scripts will be executed concurrently: the indexer and a block listener. The block listener will subscribe to new blocks and run the indexing functions on them. The indexer will separate the unindexed blocks of a chain and turn them into batches to distribute the workload among the available cpu cores. The indexing process can take a while (possibly multiple days) depending on the hardware it is executed on and the performance of the given endpoint. It is recommended to run this service on a machine with at least 8 CPU cores, preferably more. If for any reason the indexer crashes, it can be restarted by using the same command. It will recalculate the batches and pick up where it left off. When starting the indexer for a chain with custom pallets, there might be warning messages popping up.
 
-(!) Before running any of the following commands, call this route with the corresponding endpoint.
-This will add the wsProvider to the database, which is a necessary step before starting any of the indexing services.
-Furthermore, the chain can only be added to the database if it implements the identity pallet.
+### Getting Started
+
+❗ Before running any of the later described commands, call the following API route with the corresponding endpoint. Open a terminal and run:
+```bash
+# This will add the wsProvider to the database, which is a necessary 
+# step before starting any of the indexing services.
+# Replace 'wss://rpc.polkadot.io' with your wanted chain endpoint
+curl --location --request GET 'http://localhost:5001/chains/status?wsProvider=wss://rpc.polkadot.io'
 ```
-.../chain/status?parameter=wss://endpoint.rpc.url 
-```
 
-Indexer and listener concurrently (given --endpoint for both scripts in package.json):
+The following commands are defined in the package.json file under 'scripts' and will only function properly on Unix operating systems.
+Running the script on Windows will require you to replace the & with && in the package.json script. 
 
-The script is defined in the package.json file and will only function properly on linux/ MacOS operating systems.
-Running the script on windows will require you to replace the & with && in the package.json script. 
-
-```
+```bash
+# Indexer and listener concurrently (given --endpoint for both scripts in package.json):
 npm run dev-exec 
-```
 
-Indexer only (given --from and --to blocks in package.json):
-```
+# Indexer only (given --from and --to blocks in package.json):
 npm run dev-indexer 
-```
 
-Listener only (given --endpoint in package.json):
-```
+# Listener only (given --endpoint in package.json):
 npm run dev-listener
 ```
 
