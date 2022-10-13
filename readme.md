@@ -2,6 +2,17 @@
 
 [![Tests](https://github.com/TDSoftware/subidentity-backend/actions/workflows/runUnitTests.yml/badge.svg)](https://github.com/TDSoftware/subidentity-backend/actions/workflows/runUnitTests.yml)
 
+## Content
+
+* [General](#general)
+* [Components](#components)
+* [Get Started](#getStarted)
+* [API](#apiDocumentation)
+* [Indexer](#indexer)
+* [Database](#database)
+
+## <a id="general"></a>General
+
 SubIdentity backend is a Node.js backend developed for the [SubIdentity web application](https://github.com/TDSoftware/subidentity-webapp) that can be used to index a Substrate based chain which is implementing the identity pallet by providing an archive node. For indexed chains it can be used to search for identities e.g., in order to improve the [SubIdentity web application's](https://github.com/TDSoftware/subidentity-webapp) performance.
 
 The project consists of 4 Node.js applications. An indexer, a listener, a scheduler and an API service. 
@@ -12,7 +23,7 @@ You can find an illustration of the SubIdentity project architecture [here](./do
 
 <hr />
 
-## Components
+## <a id="components"></a>Components
 
 ### API Service
 The API Service is providing the API to be consumed e.g., by the [SubIdentity web application](https://github.com/TDSoftware/subidentity-webapp) to retrieve detailed information about identities on substrate based chains. See chapter [API Documentation](#apiDocumentation) for more information. 
@@ -27,27 +38,12 @@ After the chain is indexed by the Indexer, the Listener keeps the data in the My
 The Scheduler is used to fetch and store basic information about identities from Substrate based chains regularly in a MySQL Database to increase performance. 
 
 ### MySQL Datatbase
-
-With this project a [docker compose](./docker-compose.yml) file was provided to set up a MySQL Database, that can be used as follows:
-
-```
-docker-compose up -d
-```
-
-Alternatively, a MySQL Database can be set up manually.
-
-❗ In order to establish a connection to the database sucessfully you need to duplicate the [.env.template](./.env.template) file and name it `.env`. Edit the values to fit your database setup. ℹ️ If you are using the provided docker compose file, the values in the [.env.template](./.env.template) are set correctly and just need to be copied to an `.env` file.
-
-#### Database Migration
-
-The application is using migration files to add, update or delete database tables. They can be found in [dbMigrations](./src/dbMigrations/) folder. The database should only be adjusted in this way. The SQL commands in the migration files are executed only on startup of the API service. The execution is documented in a `MIGRATION` table in the database, to prevent the same commands from being executed multiple times.
-
-ℹ️ After a change in the migrations files or before the first startup of the scheduler, the API Service needs to be run as described below, to migrate the database correctly.
+All data indexed from any polkadot chain will be stored in a local MySQL database. The project contains a Docker compose file to run a database easily. More infos can be found under [Database](#database)
 
 
 <hr />
 
-## Get Started
+## <a id="getStarted"></a>Get Started
 
 ### Install dependencies
 
@@ -163,7 +159,7 @@ curl --location --request GET 'http://localhost:5001/version'
 ```
 <hr />
 
-## Indexer
+## <a id="indexer"></a>Indexer
 
 ### Identity Indexing
 By default, the scheduler is set up to fetch identities from known chains at every 15th minute (e.g. 9:00, 9:15, 9:30, ...). Depending on the use case this value can be adjusted. Therefore, you need to adjust the cron schedule in [scheduler.ts](./src/scheduler.ts). For more information regarding the adjustment read about [node-cron](https://www.npmjs.com/package/node-cron).
@@ -175,7 +171,7 @@ The indexer uses the Polkadot JS API to retrieve and save the data to our MySQL 
 
 To increase efficiency, the indexer will determine the amount of cpu cores in the executing machine and will create batches of blocks to separately be indexed by different workers. When starting the indexer, two different scripts will be executed concurrently: the indexer and a block listener. The block listener will subscribe to new blocks and run the indexing functions on them. The indexer will separate the unindexed blocks of a chain and turn them into batches to distribute the workload among the available cpu cores. The indexing process can take a while (possibly multiple days) depending on the hardware it is executed on and the performance of the given endpoint. It is recommended to run this service on a machine with at least 8 CPU cores, preferably more. If for any reason the indexer crashes, it can be restarted by using the same command. It will recalculate the batches and pick up where it left off. When starting the indexer for a chain with custom pallets, there might be warning messages popping up.
 
-### Getting Started
+### Get Started
 
 ❗ Before running any of the later described commands, call the following API route with the corresponding endpoint. Open a terminal and run:
 ```bash
@@ -199,3 +195,20 @@ npm run dev-indexer
 npm run dev-listener
 ```
 
+## <a id="database"></a> Database
+
+With this project a [docker compose](./docker-compose.yml) file was provided to set up a MySQL Database, that can be used as follows:
+
+```
+docker-compose up -d
+```
+
+Alternatively, a MySQL Database can be set up manually.
+
+❗ In order to establish a connection to the database sucessfully you need to duplicate the [.env.template](./.env.template) file and name it `.env`. Edit the values to fit your database setup. ℹ️ If you are using the provided docker compose file, the values in the [.env.template](./.env.template) are set correctly and just need to be copied to an `.env` file.
+
+#### Database Migration
+
+The application is using migration files to add, update or delete database tables. They can be found in [dbMigrations](./src/dbMigrations/) folder. The database should only be adjusted in this way. The SQL commands in the migration files are executed only on startup of the API service. The execution is documented in a `MIGRATION` table in the database, to prevent the same commands from being executed multiple times.
+
+ℹ️ After a change in the migrations files or before the first startup of the scheduler, the API Service needs to be run as described below, to migrate the database correctly.
