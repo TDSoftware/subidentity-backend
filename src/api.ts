@@ -12,6 +12,7 @@ import { migrateDatabase } from "./lib/mysqlDatabase";
 import { chainRouter } from "./routes/chains/chainRouter";
 import { versionRouter } from "./routes/versionRouter";
 import { identityRouter } from "./routes/identities/identityRouter";
+import { trackingRouter } from "./routes/tracking/trackingRouter";
 import { Server } from "http";
 import cors from "cors";
 
@@ -29,6 +30,7 @@ function registerRouters(app: Application): void {
     app.use(basePath + "/chains", chainRouter);
     app.use(basePath + "/version", versionRouter);
     app.use(basePath + "/identities", identityRouter);
+    app.use(basePath + "/log", trackingRouter);
 }
 
 /**

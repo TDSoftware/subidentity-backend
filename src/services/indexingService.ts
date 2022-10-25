@@ -47,6 +47,7 @@ import { tipProposalRepository } from "../repositories/tipProposalRepository";
 import { tipRepository } from "../repositories/tipRepository";
 import { treasuryProposalRepository } from "../repositories/treasuryProposalRepository";
 import { ProposalType } from "../types/enums/ProposalType";
+import { translateIfByte, parseAmount } from "./utils/indexingUtil";
 
 let chain: ChainEntity;
 let wsProvider: WsProvider;
@@ -379,20 +380,10 @@ export const indexingService = {
             if (bountyEntry) {
                 entry = bountyEntry;
             }
-
+            const value = parseAmount(args.value, chain);
             entry.bounty_id = bountyId;
             entry.description = String(args.description);
-            let value = <number>{};
-            if (String(args.value).includes("k" + chain.token_symbol!)) {
-                value = parseFloat(args.value) * 1000;
-            } else if (String(args.value).includes("m" + chain.token_symbol!)) {
-                value = parseFloat(args.value) / 1000;
-            } else if (String(args.value).includes(chain.token_symbol!)) {
-                value = parseFloat(args.value);
-            } else {
-                value = parseFloat((args.value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-            }
-            entry.value = value;
+            entry.value = value
             entry.chain_id = chain.id;
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             entry.proposed_by = proposer.id;
@@ -427,17 +418,7 @@ export const indexingService = {
             const proposalId = tpe.data[0];
             const tpEntry = await treasuryProposalRepository.getByProposalIdAndChainId(proposalId, chain.id);
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-
-            let value: number = <number>{};
-            if (String(args.value).includes("k" + chain.token_symbol!)) {
-                value = parseFloat(args.value) * 1000;
-            } else if (String(args.value).includes("m" + chain.token_symbol!)) {
-                value = parseFloat(args.value) / 1000;
-            } else if (String(args.value).includes(chain.token_symbol!)) {
-                value = parseFloat(args.value);
-            } else {
-                value = parseFloat((args.value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-            }
+            const value = parseAmount(args.value, chain);
 
             if (tpEntry) {
                 tpEntry.value = value;
@@ -721,7 +702,7 @@ export const indexingService = {
                     const finder = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
 
                     if (tipProposalEntry) {
-                        tipProposalEntry.reason = args.reason;
+                        tipProposalEntry.reason = translateIfByte(args.reason);
                         tipProposalEntry.chain_id = chain.id;
                         tipProposalEntry.proposed_at = blockEntity.id;
                         tipProposalEntry.motion_hash = motionHash;
@@ -734,7 +715,7 @@ export const indexingService = {
                         await tipProposalRepository.update(tipProposalEntry);
                     } else if (!tipProposalEntry) {
                         const tipProposal = <TipProposalEntity>{
-                            reason: args.reason,
+                            reason: translateIfByte(args.reason),
                             chain_id: chain.id,
                             proposed_at: blockEntity.id,
                             status: TipProposalStatus.Proposed,
@@ -755,21 +736,10 @@ export const indexingService = {
                     const tipProposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
                     const beneficiary = await accountRepository.getOrCreateAccount(args.who, chain.id);
                     const finder = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-
-
-                    let value = <number>{};
-                    if (String(args.tip_value).includes("k" + chain.token_symbol!)) {
-                        value = parseFloat(args.tip_value) * 1000;
-                    } else if (String(args.tip_value).includes("m" + chain.token_symbol!)) {
-                        value = parseFloat(args.tip_value) / 1000;
-                    } else if (String(args.tip_value).includes(chain.token_symbol!)) {
-                        value = parseFloat(args.tip_value);
-                    } else {
-                        value = parseFloat((args.tip_value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-                    }
+                    const value = parseAmount(args.tip_value, chain)
 
                     if (tipProposalEntry) {
-                        tipProposalEntry.reason = args.reason;
+                        tipProposalEntry.reason = translateIfByte(args.reason);
                         tipProposalEntry.chain_id = chain.id;
                         tipProposalEntry.proposed_at = blockEntity.id;
                         tipProposalEntry.motion_hash = motionHash;
@@ -783,7 +753,7 @@ export const indexingService = {
                         await tipProposalRepository.update(tipProposalEntry);
                     } else if (!tipProposalEntry) {
                         const tipProposal = <TipProposalEntity>{
-                            reason: args.reason,
+                            reason: translateIfByte(args.reason),
                             chain_id: chain.id,
                             proposed_at: blockEntity.id,
                             status: TipProposalStatus.Proposed,
@@ -821,17 +791,7 @@ export const indexingService = {
                 if (tipEvent) {
                     const motionHash = JSON.parse(JSON.stringify(tipEvent!.data))[0];
                     const tipProposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
-
-                    let value = <number>{};
-                    if (String(JSON.parse(JSON.stringify(tipEvent!.data))[2]).includes("k" + chain.token_symbol!)) {
-                        value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2]) * 1000;
-                    } else if (String(JSON.parse(JSON.stringify(tipEvent!.data))[2]).includes("m" + chain.token_symbol!)) {
-                        value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2]) / 1000;
-                    } else if (String(JSON.parse(JSON.stringify(tipEvent!.data))[2]).includes(chain.token_symbol!)) {
-                        value = parseFloat(JSON.parse(JSON.stringify(tipEvent!.data))[2]);
-                    } else {
-                        value = parseFloat((JSON.parse(JSON.stringify(tipEvent!.data))[2].replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-                    }
+                    const value = parseAmount(JSON.parse(JSON.stringify(tipEvent!.data))[2], chain);
 
                     if (!tipProposalEntry) {
                         const tipProposal = <TipProposalEntity>{
@@ -870,17 +830,7 @@ export const indexingService = {
                 }
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 tip.tipper = account.id;
-
-                if (String(args.tip_value).includes("k" + chain.token_symbol!)) {
-                    tip.value = parseFloat(args.tip_value) * 1000;
-                } else if (String(args.tip_valuee).includes("m" + chain.token_symbol!)) {
-                    tip.value = parseFloat(args.tip_value) / 1000;
-                } else if (String(args.tip_value).includes(chain.token_symbol!)) {
-                    tip.value = parseFloat(args.tip_value);
-                } else {
-                    tip.value = parseFloat((args.tip_value.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
-                }
-
+                tip.value = parseAmount(args.tip_value, chain);
                 tip.tipped_at = blockEntity.id;
                 await tipRepository.insert(tip);
                 break;
@@ -909,7 +859,6 @@ export const indexingService = {
                 };
                 const account = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
                 proposalEntity.proposed_by = account.id;
-
                 await proposalRepository.insert(proposalEntity);
             } else {
                 proposal.proposed_at = blockEntity.id;
@@ -976,17 +925,8 @@ export const indexingService = {
             vote = <ReferendumVoteEntity>{
                 referendum_id: referendumIndex,
                 vote: voteDetails.vote.vote === Vote.Aye,
-                voted_at: blockEntity.id
-            };
-
-            if (String(voteDetails.balance).includes("k" + chain.token_symbol!)) {
-                vote.locked_value = parseFloat(voteDetails.balance) * 1000;
-            } else if (String(voteDetails.balance).includes("m" + chain.token_symbol!)) {
-                vote.locked_value = parseFloat(voteDetails.balance) / 1000;
-            } else if (String(voteDetails.balance).includes(chain.token_symbol!)) {
-                vote.locked_value = parseFloat(voteDetails.balance);
-            } else {
-                vote.locked_value = parseFloat((voteDetails.balance.replace(/,/g, "") / Math.pow(10, chain.token_decimals!)).toFixed(chain.token_decimals!));
+                voted_at: blockEntity.id,
+                locked_value: parseAmount(voteDetails.balance, chain),
             }
 
             if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
