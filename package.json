@@ -58,7 +58,7 @@
     "start-listener": "npm run build && node dist/src/listener.js",
     "build": "npm run lint && tsc -p .",
     "postbuild": "copyfiles --error --up 1 ./src/dbMigrations/*.sql ./dist/src",
-    "lint": "eslint \"**/*.{ts,tsx}\"",
+    "lint": "eslint \"**/*.{ts,tsx}\" --fix",
     "test": "jest --forceExit --maxWorkers=1 --silent"
   },
   "author": "TDSoftware",
