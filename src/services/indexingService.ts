@@ -383,7 +383,7 @@ export const indexingService = {
             const value = parseAmount(args.value, chain);
             entry.bounty_id = bountyId;
             entry.description = String(args.description);
-            entry.value = value
+            entry.value = value;
             entry.chain_id = chain.id;
             const proposer = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
             entry.proposed_by = proposer.id;
@@ -736,7 +736,7 @@ export const indexingService = {
                     const tipProposalEntry = await tipProposalRepository.getByMotionHashAndChainId(motionHash, chain.id);
                     const beneficiary = await accountRepository.getOrCreateAccount(args.who, chain.id);
                     const finder = await accountRepository.getOrCreateAccount(extrinsicSigner, chain.id);
-                    const value = parseAmount(args.tip_value, chain)
+                    const value = parseAmount(args.tip_value, chain);
 
                     if (tipProposalEntry) {
                         tipProposalEntry.reason = translateIfByte(args.reason);
@@ -926,8 +926,8 @@ export const indexingService = {
                 referendum_id: referendumIndex,
                 vote: voteDetails.vote.vote === Vote.Aye,
                 voted_at: blockEntity.id,
-                locked_value: parseAmount(voteDetails.balance, chain),
-            }
+                locked_value: parseAmount(voteDetails.balance, chain)
+            };
 
             if (voteDetails.vote.conviction === "None") vote.conviction = 0.1;
             else {
