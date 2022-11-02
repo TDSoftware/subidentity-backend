@@ -14,9 +14,14 @@ trackingRouter.post("/", async (req: Request, res: Response, next: NextFunction)
             throw new Error("400:Body parameter missing:info");
 
         const log = <LogEntity>{};
-        const hash = crypto.createHash("sha1");
-        hash.update(req.ip);
-        log.ip = hash.digest("hex");
+        // const hash = crypto.createHash("sha1");
+        // const ip = 
+        // hash.update(req.ip);
+        let ip = req.headers["x-forwarded-for"] ?? req.socket.remoteAddress;
+        if (Array.isArray(ip)) {
+            ip = ip.join(", ");
+        }
+        log.ip = ip ?? "unknown";
         log.timestamp = Date.now();
         log.event = req.body.event;
         log.info = req.body.info;
