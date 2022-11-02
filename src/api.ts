@@ -17,6 +17,7 @@ import { Server } from "http";
 import cors from "cors";
 
 export const app: Application = express();
+app.set("trust proxy", true);
 export let server: Server;
 
 startUp();
