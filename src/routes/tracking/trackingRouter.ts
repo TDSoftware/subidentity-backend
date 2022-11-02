@@ -14,7 +14,8 @@ trackingRouter.post("/", async (req: Request, res: Response, next: NextFunction)
             throw new Error("400:Body parameter missing:info");
 
         const log = <LogEntity>{};
-        log.ip = req.ip;
+        const ip = req.headers["x-real-ip"] || req.connection.remoteAddress;
+        log.ip = (Array.isArray(ip) ? ip.join(", ") : ip) ?? "unknown";
         log.timestamp = Date.now();
         log.event = req.body.event;
         log.info = req.body.info;
